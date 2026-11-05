@@ -14,6 +14,8 @@ export interface AppVitalsContext {
   client: PlayClient;
   packages: string[];
   allowWrites: boolean;
+  /** Customer registration page for hosted accounts. Omit for self-hosted servers. */
+  appRegistrationUrl?: string;
   reviewHistory?: (query: ReviewHistoryQuery) => Promise<unknown>;
 }
 
@@ -68,7 +70,9 @@ export async function toolListApps(ctx: AppVitalsContext): Promise<ToolResult> {
     packages: ctx.packages,
     note:
       ctx.packages.length === 0
-        ? "No package names configured. Set APPVITALS_PACKAGES to a comma separated list."
+        ? ctx.appRegistrationUrl
+          ? `No package names configured. Register your Android app package names at ${ctx.appRegistrationUrl} using your hostedmcp.dev API key.`
+          : "No package names configured. Set APPVITALS_PACKAGES to a comma separated list."
         : "These are the package names this server will read.",
   });
 }

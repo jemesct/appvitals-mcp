@@ -72,6 +72,11 @@ describe("hosted", () => {
     expect(created.apiKey?.startsWith("av_")).toBe(true);
     expect(email.sent).toHaveLength(1);
     expect(email.sent[0]?.text).toContain(created.apiKey);
+    expect(email.sent[0]?.text).toContain("Register the Android package names you want AppVitals to read:");
+    expect(email.sent[0]?.text).toContain("https://hostedmcp.dev/appvitals/connect");
+    expect(email.sent[0]?.text).toContain("Use the API key above");
+    expect(email.sent[0]?.text).toContain("Solo covers 1 app.");
+    expect(email.sent[0]?.text).toContain("https://hostedmcp.dev/api/mcp/appvitals");
     const stored = await repo.findApiKeyByHash(sha256(created.apiKey ?? ""));
     expect(stored?.customer.email).toBe("dev@example.com");
     expect(JSON.stringify(repo.apiKeys)).not.toContain(created.apiKey);
@@ -345,6 +350,8 @@ describe("hosted", () => {
     if (!created.ok) return;
     expect(email.sent[0]?.text).toContain("https://hostedmcp.dev/api/mcp/shipvitals");
     expect(email.sent[0]?.text).toContain("ShipVitals");
+    expect(email.sent[0]?.text).not.toContain("/appvitals/connect");
+    expect(email.sent[0]?.text).not.toContain("Android package names");
     const subscription = await repo.findSubscriptionByLsId("sub_ship");
     expect(subscription?.productId).toBe("shipvitals");
     expect(subscription?.plan).toBe("solo");
