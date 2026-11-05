@@ -6,6 +6,7 @@ import type {
   AppRecord,
   AscCredentialRecord,
   Customer,
+  MerchantCredentialRecord,
   RecordToolEventInput,
   Repository,
   ReviewSnapshot,
@@ -29,6 +30,7 @@ export class MemoryRepository implements Repository {
   alerts: AlertSent[] = [];
   toolEvents: ToolEvent[] = [];
   ascCredentials: AscCredentialRecord[] = [];
+  merchantCredentials: MerchantCredentialRecord[] = [];
 
   async getCustomer(customerId: string): Promise<Customer | null> {
     return this.customers.find((customer) => customer.id === customerId) ?? null;
@@ -260,6 +262,21 @@ export class MemoryRepository implements Repository {
       .filter((row) => (input.productId ? row.productId === input.productId : true))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
       .slice(0, limit);
+  }
+
+  async getMerchantCredentials(customerId: string): Promise<MerchantCredentialRecord | null> {
+    return this.merchantCredentials.find((row) => row.customerId === customerId) ?? null;
+  }
+
+  async upsertMerchantCredentials(input: Omit<MerchantCredentialRecord, "id">): Promise<MerchantCredentialRecord> {
+    const existing = this.merchantCredentials.find((row) => row.customerId === input.customerId);
+    if (existing) {
+      Object.assign(existing, input);
+      return existing;
+    }
+    const row = { id: id(), ...input };
+    this.merchantCredentials.push(row);
+    return row;
   }
 
   async getAscCredentials(customerId: string): Promise<AscCredentialRecord | null> {

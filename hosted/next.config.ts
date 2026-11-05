@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: [
     "appvitals-mcp",
     "shipvitals-mcp",
+    "merchantops-mcp",
     "@modelcontextprotocol/sdk",
     "google-auth-library",
     "postgres",

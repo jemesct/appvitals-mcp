@@ -102,3 +102,14 @@ CREATE TABLE IF NOT EXISTS asc_credentials (
   ciphertext TEXT NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Per-customer MerchantOps store keys. Provider, store id, and environment are
+-- encrypted together with the keys, using MERCHANTOPS_CREDENTIALS_KEY.
+CREATE TABLE IF NOT EXISTS merchant_credentials (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL UNIQUE REFERENCES customers(id),
+  iv TEXT NOT NULL,
+  auth_tag TEXT NOT NULL,
+  ciphertext TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

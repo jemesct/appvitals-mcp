@@ -80,7 +80,7 @@ export interface ToolEvent {
   createdAt: string;
 }
 
-export interface AscCredentialRecord {
+export interface EncryptedCredentialRecord {
   id: string;
   customerId: string;
   iv: string;
@@ -88,6 +88,11 @@ export interface AscCredentialRecord {
   ciphertext: string;
   updatedAt: string;
 }
+
+export interface AscCredentialRecord extends EncryptedCredentialRecord {}
+
+/** All store keys for one customer, replaced atomically as one encrypted bundle. */
+export interface MerchantCredentialRecord extends EncryptedCredentialRecord {}
 
 export interface RecordToolEventInput {
   productId: string;
@@ -139,6 +144,8 @@ export interface Repository {
   recordAlert(input: Omit<AlertSent, "id">): Promise<{ inserted: boolean }>;
   recordToolEvent(input: RecordToolEventInput): Promise<ToolEvent>;
   listToolEvents(input?: { customerId?: string; productId?: string; limit?: number }): Promise<ToolEvent[]>;
+  getMerchantCredentials(customerId: string): Promise<MerchantCredentialRecord | null>;
+  upsertMerchantCredentials(input: Omit<MerchantCredentialRecord, "id">): Promise<MerchantCredentialRecord>;
   getAscCredentials(customerId: string): Promise<AscCredentialRecord | null>;
   upsertAscCredentials(input: {
     customerId: string;

@@ -1,5 +1,9 @@
 import { ProductTitle, WorksWithStores } from "@/components/BrandMarks";
 import Link from "next/link";
+import { getProduct } from "@/lib/products";
+import { checkoutConfigError } from "@/lib/lemonsqueezy";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "MerchantOps · Lemon Squeezy and Paddle · hostedmcp.dev",
@@ -7,6 +11,8 @@ export const metadata = {
 };
 
 export default function MerchantOpsPage() {
+  const product = getProduct("merchantops")!;
+  const checkoutUnavailable = checkoutConfigError(process.env, "merchantops");
   return (
     <main>
       <ProductTitle worksWith={<WorksWithStores />}>MerchantOps</ProductTitle>
@@ -20,17 +26,31 @@ export default function MerchantOpsPage() {
         <li>Lemon Squeezy licence keys, and discount codes on both providers.</li>
       </ul>
       <p>
-        Writes (a refund, a revoked key, a new discount) stay off unless you opt in on the server and the tool call confirms. Paddle has no licence keys. Lemon Squeezy cannot mint a key on demand.
+        Writes (a refund, a revoked key, a new discount) stay off unless the server allows them and the tool call confirms. Paddle has no licence keys. Lemon Squeezy cannot mint a key on demand.
       </p>
       <h2>Self-host</h2>
       <p>
-        The open-source package is private for now:{" "}
-        <a href="https://github.com/jemesct/merchantops-mcp">jemesct/merchantops-mcp</a>. When you have access, run it with your own <code>LEMONSQUEEZY_API_KEY</code> and <code>PADDLE_API_KEY</code>. Mock mode needs no keys.
+        The MCP is included here in <code>packages/merchantops-mcp</code> under the MIT licence, from{" "}
+        <a href="https://github.com/jemesct/merchantops-mcp">jemesct/merchantops-mcp</a>. You can run it yourself with your own <code>LEMONSQUEEZY_API_KEY</code> and <code>PADDLE_API_KEY</code>. Mock mode needs no keys.
       </p>
       <h2>Hosted plan</h2>
       <p>
-        There is no hosted checkout yet. We are not selling a shared store key, and this page does not take API keys. A hosted plan can come later, the same way ShipVitals keeps each customer&apos;s key separate.
+        Solo is US$9 a month for one store with one provider key. Team is US$19 a month for multiple stores on Lemon Squeezy, Paddle, or both. 7 day trial. Checkout is Lemon Squeezy. After checkout, we email your hostedmcp.dev API key. Then{" "}
+        <Link href="/merchantops/connect">save your store keys</Link>. Each customer uses their own keys. We encrypt them before saving and do not show them again. There is no shared store key.
       </p>
+      {checkoutUnavailable ? <p className="notice">Checkout is not available yet. You can self-host MerchantOps while the hosted plans are being set up.</p> : null}
+      <div className="prices">
+        {product.plans.map((plan) => (
+          <article className="card" key={plan.id}>
+            <h3 style={{ margin: 0 }}>{plan.name}</h3>
+            <p className="price">US${plan.priceUsdMonthly}/mo</p>
+            <p>{plan.blurb}</p>
+            {checkoutUnavailable ? <p className="muted">Checkout unavailable</p> : (
+              <a className="button" href={`/api/checkout?plan=${plan.id}&product=merchantops`}>Start trial</a>
+            )}
+          </article>
+        ))}
+      </div>
       <p>
         <Link href="/appvitals">AppVitals is Google Play</Link>. <Link href="/shipvitals">ShipVitals is iOS</Link>.
       </p>
