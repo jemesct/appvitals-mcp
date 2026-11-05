@@ -107,19 +107,23 @@ export function mapLemonStatus(status: string | undefined, eventName: string): S
   }
 }
 
-export function planFromLemon(event: LemonEvent, env: NodeJS.ProcessEnv): PlanId | null {
-  const custom = event.meta?.custom_data?.plan;
-  if (custom && isPlanId(custom)) return custom;
+function productPlanFromVariant(event: LemonEvent, env: NodeJS.ProcessEnv): { productId: string; plan: PlanId } | null {
   const variant = event.data?.attributes?.variant_id;
   if (variant == null) return null;
-  const id = String(variant);
   for (const product of products) {
     for (const plan of ["solo", "unlimited"] as const) {
       const name = variantEnvName(product.id, plan);
-      if (name && env[name] && id === env[name]) return plan;
+      if (name && env[name] && String(variant) === env[name]) return { productId: product.id, plan };
     }
   }
   return null;
+}
+
+export function planFromLemon(event: LemonEvent, env: NodeJS.ProcessEnv): PlanId | null {
+  const matched = productPlanFromVariant(event, env);
+  if (matched) return matched.plan;
+  const custom = event.meta?.custom_data?.plan;
+  return custom && isPlanId(custom) ? custom : null;
 }
 
 export async function handleLemonEvent(opts: {
@@ -142,7 +146,9 @@ export async function handleLemonEvent(opts: {
   }
   const email = opts.event.data?.attributes?.user_email ?? opts.event.meta?.custom_data?.email;
   if (!email) return { ok: false, message: "Webhook is missing the customer email." };
-  const productId = opts.event.meta?.custom_data?.product_id || opts.event.meta?.custom_data?.product || "appvitals";
+  const matched = productPlanFromVariant(opts.event, opts.env);
+  const previous = opts.event.data?.id ? await opts.repo.findSubscriptionByLsId(opts.event.data.id) : null;
+  const productId = matched?.productId ?? previous?.productId ?? opts.event.meta?.custom_data?.product_id ?? opts.event.meta?.custom_data?.product ?? "appvitals";
   const product = getProduct(productId);
   if (!product) {
     return { ok: false, message: `Unknown product ${productId}.` };
@@ -150,7 +156,7 @@ export async function handleLemonEvent(opts: {
   if (!product.forSale) {
     return { ok: true, ignored: true };
   }
-  const plan = planFromLemon(opts.event, opts.env);
+  const plan = planFromLemon(opts.event, opts.env) ?? previous?.plan ?? null;
   if (!plan) return { ok: false, message: "Could not map this subscription to a solo or unlimited plan." };
   const status = mapLemonStatus(opts.event.data?.attributes?.status, name);
   const trialFromEvent = opts.event.data?.attributes?.trial_ends_at ?? null;
@@ -167,7 +173,16 @@ export async function handleLemonEvent(opts: {
   });
   if (name !== "subscription_created") return { ok: true };
   const existing = await opts.repo.listApiKeys(customer.id);
-  if (existing.length > 0) return { ok: true };
+  if (existing.length > 0) {
+    if (productId === "merchantops" && !previous) {
+      await opts.email.send({
+        to: customer.email,
+        subject: "Connect your MerchantOps stores",
+        text: `Your MerchantOps subscription is ready. Use the hostedmcp.dev API key from your original email. Save your store keys at https://hostedmcp.dev${product.connectPath}. Connect your MCP client at https://hostedmcp.dev${product.mcpPath} with Authorization: Bearer <key>.`,
+      });
+    }
+    return { ok: true };
+  }
   const key = generateApiKey();
   await opts.repo.insertApiKey({
     customerId: customer.id,
@@ -186,6 +201,7 @@ export async function handleLemonEvent(opts: {
       "We only store a hash of the key, so keep this email.",
       "",
       `This subscription is for ${product.name}.`,
+      ...(productId === "merchantops" ? [`Save your store keys at https://hostedmcp.dev${product.connectPath}. Your keys are encrypted and not shown again.`] : []),
       `Point your MCP client at https://hostedmcp.dev${product.mcpPath} with Authorization: Bearer <key>.`,
     ].join("\n"),
   });

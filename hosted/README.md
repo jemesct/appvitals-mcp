@@ -38,4 +38,29 @@ Each customer pastes their own Key ID, Issuer ID, and `.p8` on `/shipvitals/conn
 
 ## MerchantOps
 
-`/merchantops` explains the Lemon Squeezy and Paddle MCP. There is no checkout and no credential form. The package lives in the private repo `jemesct/merchantops-mcp`.
+`/merchantops` offers Solo (US$9/month, one store and one provider key) and Team (US$19/month, multiple stores on either or both providers). Both have a 7 day trial. `/api/mcp/merchantops` uses the same hub-wide bearer API key and per-product subscription checks as ShipVitals.
+
+After checkout the email links to `/merchantops/connect`. Customers save their own keys, a numeric store id for each Lemon Squeezy store, and a production/sandbox environment for each Paddle key. Saving checks read access and replaces the entire store set atomically. Failed checks leave the previous set intact. Keys are password fields and are never returned after save, put in redirects, or logged in `mcp_usage`. The usage table records metadata only, just like ShipVitals.
+
+Set `MERCHANTOPS_CREDENTIALS_KEY` to an independent random 32-byte key (`openssl rand -base64 32`). Hex (64 characters) is also accepted. Do not reuse `SHIPVITALS_CREDENTIALS_KEY` or commit either key. Back it up securely: changing it without re-encrypting the stored rows means customers must save their keys again. The additive `merchant_credentials` table is applied on first database use, along with the existing schema. Production needs persistent `DATABASE_URL`; the memory fallback is for local development only.
+
+Each request decrypts only the authenticated customer's bundle. There is no fallback to `LEMONSQUEEZY_API_KEY`, `LEMONSQUEEZY_STORE_ID`, `PADDLE_API_KEY`, or mock credentials. Those first two variables remain the hub's billing credentials, separate from customer store keys. Solo is checked at save and again at request time, so a downgrade cannot keep multiple stores active. A downgraded customer saves a single store to resume.
+
+`providers_status` lists saved ids (`store-1`, `store-2`, ... in form order). Other tools accept an optional `store` id; it is required when the selected provider has multiple stores. Lemon Squeezy reads are filtered to the saved store, and direct refund/licence writes check ownership before executing. Paddle entries cover the account belonging to that key. `MERCHANTOPS_ALLOW_WRITES=1` (or `true`) enables hosted writes, still requiring `confirm: true` per call. Leave it unset for read-only hosting and dry runs.
+
+### Manual billing setup (not performed by this branch)
+
+1. Create two Lemon Squeezy **test-mode** subscription products/variants: MerchantOps Solo at US$9/month and MerchantOps Team at US$19/month, each with a 7 day free trial.
+2. Set `LEMONSQUEEZY_VARIANT_MERCHANTOPS_SOLO` and `LEMONSQUEEZY_VARIANT_MERCHANTOPS_UNLIMITED` to their test-mode variant ids. Neither has a default or a committed value. Use the matching test-mode billing API key/store when testing in an isolated environment; do not replace live shared billing settings.
+3. Set the independent `MERCHANTOPS_CREDENTIALS_KEY`, persistent database, and existing webhook/email configuration in the intended environment. Verify signed subscription-created/updated/cancelled events reach `/api/webhooks/lemonsqueezy`.
+4. Test checkout, emailed hub key, store-key save, both MCP providers, Team downgrade, and cancellation in that isolated environment. No deployment or live billing changes are part of this PR.
+
+When variants are missing, the MerchantOps page shows checkout as unavailable and `/api/checkout?product=merchantops&plan=solo` returns the existing 503 configuration message without contacting Lemon Squeezy.
+
+### Branch deployment guard
+
+`vercel.json` and `hosted/vercel.json` disable automatic Vercel Git deployments for `hosted-merchantops` only, covering either project root so pushing this PR does not create a preview. Other branches keep their existing behavior. No deployment command or live project setting is changed.
+
+### Package provenance
+
+`packages/merchantops-mcp` was copied from `jemesct/merchantops-mcp` commit `44434a18000bce327ec365ca50209a7a50d47c6e`, including its MIT licence, source, fixtures, tests, and stdio selfcheck. It is a workspace package like ShipVitals, not a runtime dependency on a private GitHub checkout. Its existing tools are reused; the server factory adds optional named-store connections. The SDK version and Zod dependency follow the hub's existing versions. Future upstream changes must be synced deliberately.

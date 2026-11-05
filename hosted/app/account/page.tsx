@@ -11,7 +11,7 @@ export default function AccountPage() {
         you, and the API key in that email is how your tools sign in.
       </p>
       <p>
-        The key is for the hostedmcp.dev account. AppVitals (Google Play) and ShipVitals (iOS, App Store Connect) are separate subscriptions. MerchantOps is self-host only for now. A bundle is not a checkout option.
+        The key is for the hostedmcp.dev account. AppVitals (Google Play), ShipVitals (iOS, App Store Connect), and MerchantOps (Lemon Squeezy and Paddle) are separate subscriptions. A bundle is not a checkout option.
       </p>
       <p className="muted">
         We store a sha256 hash of the key, not the key itself. If you lose the email, subscribe

@@ -18,20 +18,19 @@ export default function TermsPage() {
       <h2>The open source MCP and the hosted service</h2>
       <p>
         The MCP servers in this project are open source under the MIT licence. You can run them
-        yourself, with your own Google or Apple credentials. That copy does not need an account
+        yourself, with your own Google, Apple, or store credentials. That copy does not need an account
         here, and these terms do not apply to it.
       </p>
       <p>
         Hosted AppVitals is Google Play: a URL, an API key, review history, and alert email. Hosted
         ShipVitals is iOS, via your own App Store Connect key, which we encrypt. We do not sell a
-        shared Apple key. MerchantOps is not a hosted subscription. You self-host that MCP with
-        your Lemon Squeezy or Paddle key. A bundle of these products is not included.
+        shared Apple key. Hosted MerchantOps uses your own Lemon Squeezy or Paddle keys, which we encrypt. A bundle of these products is not included.
       </p>
 
       <h2>Accounts and API keys</h2>
       <p>
         There is no password. Lemon Squeezy collects the email at checkout, and that email is the
-        account. We email one API key. The key signs your MCP client in to each hosted product you have subscribed to: AppVitals for Google Play, ShipVitals for iOS.
+        account. We email one API key. The key signs your MCP client in to each hosted product you have subscribed to: AppVitals for Google Play, ShipVitals for iOS, and MerchantOps for Lemon Squeezy and Paddle.
       </p>
       <p>
         The key is a credential for the hosted service. It is not a sale of the software, and it is
@@ -43,8 +42,8 @@ export default function TermsPage() {
 
       <h2>Acceptable use</h2>
       <p>
-        Use the hosted MCP for your own apps. Do not use it to break Google Play, App Store
-        Connect, or Lemon Squeezy rules. Do not probe other customers&apos; accounts, overload the
+        Use the hosted MCP for your own apps and stores. Do not use it to break Google Play, App Store
+        Connect, Lemon Squeezy, or Paddle rules. Do not probe other customers&apos; accounts, overload the
         service, or try to pull data the API key was not subscribed for. We can suspend a key that
         is being abused.
       </p>

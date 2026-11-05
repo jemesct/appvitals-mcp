@@ -50,7 +50,7 @@ export default function HomePage() {
         </ProductTitle>
         <p>Lemon Squeezy and Paddle: MRR, subscriptions, churn, failed payments, refunds, licence keys, and discounts.</p>
         <p className="muted">
-          Store ops, not App Store Connect and not Google Play. The open-source package is private for now. Self-host it with your own store keys. There is no hosted checkout yet.
+          Hosted plans use your own store keys, encrypted for your account. Solo covers one store. Team covers multiple stores on either or both providers. You can also self-host the MCP.
         </p>
         <p>
           <Link className="button" href="/merchantops">See MerchantOps</Link>

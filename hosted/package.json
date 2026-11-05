@@ -15,7 +15,8 @@
     "next": "16.4.5",
     "postgres": "^3.4.7",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "merchantops-mcp": "*"
   },
   "devDependencies": {
     "@types/react": "^19.2.2",

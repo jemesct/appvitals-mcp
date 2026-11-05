@@ -1,0 +1,50 @@
+{
+  "name": "merchantops-mcp",
+  "version": "0.1.0",
+  "description": "Open-core MCP server for Lemon Squeezy and Paddle merchant ops: MRR, churn, failed payments, refunds, license keys and discount codes.",
+  "license": "MIT",
+  "author": "builtby_James (hostedmcp.dev)",
+  "homepage": "https://hostedmcp.dev",
+  "type": "module",
+  "bin": {
+    "merchantops-mcp": "dist/index.js"
+  },
+  "main": "dist/server.js",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "selfcheck": "node scripts/selfcheck.mjs",
+    "start": "node dist/index.js",
+    "start:mock": "node dist/index.js --mock",
+    "start:http": "node dist/http-server.js"
+  },
+  "keywords": [
+    "mcp",
+    "lemonsqueezy",
+    "paddle",
+    "mrr",
+    "license-keys"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "zod": "^3.25.76"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.js"
+    }
+  }
+}

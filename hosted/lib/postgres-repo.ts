@@ -7,6 +7,7 @@ import type {
   AppRecord,
   AscCredentialRecord,
   Customer,
+  MerchantCredentialRecord,
   RecordToolEventInput,
   Repository,
   ReviewSnapshot,
@@ -418,6 +419,31 @@ class PostgresRepository implements Repository {
       LIMIT ${limit}
     `;
     return rows.map((row) => mapToolEvent(row));
+  }
+
+  async getMerchantCredentials(customerId: string): Promise<MerchantCredentialRecord | null> {
+    await this.ready();
+    const [row] = await this.sql`
+      SELECT id, customer_id, iv, auth_tag, ciphertext, updated_at
+      FROM merchant_credentials WHERE customer_id = ${customerId}
+    `;
+    return row ? mapAsc(row) : null;
+  }
+
+  async upsertMerchantCredentials(input: Omit<MerchantCredentialRecord, "id">): Promise<MerchantCredentialRecord> {
+    await this.ready();
+    const credentialId = crypto.randomUUID();
+    const [row] = await this.sql`
+      INSERT INTO merchant_credentials (id, customer_id, iv, auth_tag, ciphertext, updated_at)
+      VALUES (${credentialId}, ${input.customerId}, ${input.iv}, ${input.authTag}, ${input.ciphertext}, ${input.updatedAt})
+      ON CONFLICT (customer_id) DO UPDATE SET
+        iv = EXCLUDED.iv,
+        auth_tag = EXCLUDED.auth_tag,
+        ciphertext = EXCLUDED.ciphertext,
+        updated_at = EXCLUDED.updated_at
+      RETURNING id, customer_id, iv, auth_tag, ciphertext, updated_at
+    `;
+    return mapAsc(row);
   }
 
   async getAscCredentials(customerId: string): Promise<AscCredentialRecord | null> {
