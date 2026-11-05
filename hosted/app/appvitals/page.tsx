@@ -41,7 +41,7 @@ export default function AppVitalsPage() {
       <Examples />
       <h2>Free and open source: the MCP</h2>
       <p>
-        The MCP that talks to Google Play is open source (MIT) and free to self-host. It gives you
+        The MCP that talks to Google Play is <a href="https://github.com/jemesct/appvitals-mcp">open source (MIT) on GitHub</a> and free to self-host. It gives you
         live reviews, ratings, vitals, and releases. You run it with your own Google Cloud service
         account and an invite in Play Console. No account here, no fee.
       </p>

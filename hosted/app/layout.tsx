@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <img src="/monogram.svg" alt="" width={40} height={40} />
               made by builtby_James
             </span>
-            <span>The MCP is open source (MIT)</span>
+            <span>The MCP is <a href="https://github.com/jemesct/appvitals-mcp">open source (MIT)</a></span>
             <span className="legal">
               Google Play and Google Play Console are trademarks of Google LLC. AppVitals is not affiliated with Google.
             </span>

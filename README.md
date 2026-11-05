@@ -6,8 +6,8 @@ Open core under MIT. The MCP that talks to Play is free to self-host. The [hoste
 
 ## Layout
 
-- `packages/mcp` (`appvitals-mcp`) — the open source MCP server
-- `hosted/` — the Next.js app that runs on [hostedmcp.dev](https://hostedmcp.dev)
+- `packages/mcp` (`appvitals-mcp`): the open source MCP server
+- `hosted/`: the Next.js app that runs on [hostedmcp.dev](https://hostedmcp.dev)
 
 ## Scripts
 

@@ -13,7 +13,7 @@ export default function HomePage() {
       </p>
       <p>
         Each product is open core. The MCP that talks to the service is open source and free to
-        self-host. The hosted plans add the parts that need a server running all day: a managed URL
+        self-host (<a href="https://github.com/jemesct/appvitals-mcp">AppVitals on GitHub</a>). The hosted plans add the parts that need a server running all day: a managed URL
         and API key, stored history, and alerts.
       </p>
       {first ? (
