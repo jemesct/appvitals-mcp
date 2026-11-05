@@ -8,7 +8,7 @@ export default function PrivacyPage() {
     <main>
       <h1>Privacy</h1>
       <p className="lede">
-        hostedmcp.dev is run by builtby_James. AppVitals is the hosted Google Play product. ShipVitals is the hosted iOS product: you upload your own App Store Connect key. MerchantOps is self-hosted for now. A copy of an MCP you run yourself does not send data here.
+        hostedmcp.dev is run by builtby_James. AppVitals is the hosted Google Play product. ShipVitals is the hosted iOS product: you upload your own App Store Connect key. Hosted MerchantOps uses the Lemon Squeezy and Paddle keys you save. A copy of an MCP you run yourself does not send data here.
       </p>
       <p className="muted">Last updated 5 November 2026.</p>
 
@@ -46,15 +46,16 @@ export default function PrivacyPage() {
       <p>
         Hosted ShipVitals is iOS only. You upload your App Store Connect Key ID, Issuer ID, <code>.p8</code>, and an optional vendor number. We encrypt that bundle with AES-256-GCM before it is stored. The master key stays in <code>SHIPVITALS_CREDENTIALS_KEY</code> on the server. We decrypt it only to call Apple for your account. We do not return the <code>.p8</code> after save, and we do not use one customer&apos;s key for another customer. Sales and finance reports use the vendor number you saved, or they stay off.
       </p>
+      <h2>Lemon Squeezy and Paddle store keys</h2>
       <p>
-        MerchantOps talks to Lemon Squeezy and Paddle, not Apple or Google. It is not a hosted product yet. If you self-host it, those store API keys stay on your machine.
+        Hosted MerchantOps stores your provider keys, store ids, and Paddle environments together as AES-256-GCM ciphertext. The encryption key stays on the server, separate from the database. Your keys are used only for your account and are not shown again after save. Store data is returned to your MCP client without being kept as history here. If you self-host, your store keys stay on your machine.
       </p>
 
       <h2>Usage</h2>
       <p>
         On a hosted MCP call we log the time, the tool name, the 8 character key prefix, the
         customer id, whether it succeeded, and the latency. That covers AppVitals (Google Play) and
-        ShipVitals (iOS). We do not log the arguments, the review text, the <code>.p8</code>, or the
+        ShipVitals (iOS), and MerchantOps. We do not log the arguments, store keys, store data, the review text, the <code>.p8</code>, or the
         full API key.
       </p>
 
@@ -74,7 +75,7 @@ export default function PrivacyPage() {
       <h2>Deletion</h2>
       <p>
         Email <a href="mailto:support@hostedmcp.dev">support@hostedmcp.dev</a> and ask. We will delete your
-        customer row, API key hashes, subscription record, app list, alert records, and usage rows.
+        customer row, API key hashes, saved App Store Connect and store credentials, subscription record, app list, alert records, and usage rows.
         Review and vitals history is stored by package name. Say if you want that removed too, and
         we will delete it for the packages on your account.
       </p>

@@ -9,15 +9,15 @@ export interface CredentialBlob {
   ciphertext: string;
 }
 
-export function parseCredentialsKey(raw: string | undefined): Buffer {
+export function parseCredentialsKey(raw: string | undefined, envName = "SHIPVITALS_CREDENTIALS_KEY"): Buffer {
   const trimmed = raw?.trim() ?? "";
   if (!trimmed) {
-    throw new Error("SHIPVITALS_CREDENTIALS_KEY is not set.");
+    throw new Error(`${envName} is not set.`);
   }
   const key = /^[0-9a-fA-F]{64}$/.test(trimmed) ? Buffer.from(trimmed, "hex") : Buffer.from(trimmed, "base64");
   if (key.length !== CREDENTIALS_KEY_BYTES) {
     throw new Error(
-      "SHIPVITALS_CREDENTIALS_KEY must be 32 bytes: 64 hex characters, or base64 that decodes to 32 bytes.",
+      `${envName} must be 32 bytes: 64 hex characters, or base64 that decodes to 32 bytes.`,
     );
   }
   return key;

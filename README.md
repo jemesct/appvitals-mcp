@@ -8,6 +8,7 @@ Open core under MIT. The MCP that talks to Play is free to self-host. The [hoste
 
 - `packages/mcp` (`appvitals-mcp`): the open source MCP server for Google Play
 - `packages/shipvitals-mcp`: the open source MCP server for App Store Connect
+- `packages/merchantops-mcp`: the MCP server for Lemon Squeezy and Paddle store operations
 - `hosted/`: the Next.js app that runs on [hostedmcp.dev](https://hostedmcp.dev)
 
 ## Scripts
@@ -92,7 +93,7 @@ Self-hosting each MCP is free. Paid hosting is per product.
 
 [ShipVitals](https://hostedmcp.dev/shipvitals) is iOS, via App Store Connect. Hosted plans are Soft (US$9, one app) and Team (US$19). You upload your own `.p8`. It is encrypted with `SHIPVITALS_CREDENTIALS_KEY`. There is no shared Apple key.
 
-[MerchantOps](https://hostedmcp.dev/merchantops) is Lemon Squeezy and Paddle (MRR, subscriptions, refunds, keys). It is not an app store. The package is private for now and there is no hosted checkout.
+[MerchantOps](https://hostedmcp.dev/merchantops) is Lemon Squeezy and Paddle (MRR, subscriptions, refunds, keys). Hosted Solo is US$9/month for one store; Team is US$19/month for multiple stores and both providers, with a 7 day trial. Customers save their own keys at `/merchantops/connect`; they are encrypted with `MERCHANTOPS_CREDENTIALS_KEY`. The self-host package is in `packages/merchantops-mcp`. See `hosted/README.md` for setup.
 
 AppVitals hosted plans:
 

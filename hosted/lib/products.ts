@@ -77,6 +77,32 @@ export const products: ProductDefinition[] = [
       },
     ],
   },
+  {
+    id: "merchantops",
+    name: "MerchantOps",
+    path: "/merchantops",
+    connectPath: "/merchantops/connect",
+    mcpPath: "/api/mcp/merchantops",
+    summary: "Lemon Squeezy and Paddle store operations, using your own store keys.",
+    trialDays: 7,
+    forSale: true,
+    plans: [
+      {
+        id: "solo",
+        name: "Solo",
+        priceUsdMonthly: 9,
+        appLimit: 1,
+        blurb: "Hosted MCP for one store, with one Lemon Squeezy or Paddle key.",
+      },
+      {
+        id: "unlimited",
+        name: "Team",
+        priceUsdMonthly: 19,
+        appLimit: null,
+        blurb: "Hosted MCP for multiple stores, on Lemon Squeezy, Paddle, or both.",
+      },
+    ],
+  },
 ];
 
 export function variantEnvName(productId: string, plan: PlanId): string | null {
