@@ -86,6 +86,33 @@ describe("tools", () => {
     expect(text(result)).toContain("com.a");
   });
 
+  it.each([false, true])("guides empty accounts over MCP (hosted: %s)", async (hosted) => {
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const server = createAppVitalsServer({
+      ...ctx({ packages: [] }),
+      ...(hosted ? { appRegistrationUrl: "https://hostedmcp.dev/appvitals/connect" } : {}),
+    });
+    await server.connect(serverTransport);
+    const client = new Client({ name: "onboarding", version: "0.0.0" });
+    try {
+      await client.connect(clientTransport);
+      const result = await client.callTool({ name: "list_apps", arguments: {} });
+      expect(result.isError).not.toBe(true);
+      const body = JSON.stringify(result.content);
+      if (hosted) {
+        expect(body).toContain("Register your Android app package names at https://hostedmcp.dev/appvitals/connect");
+        expect(body).toContain("using your hostedmcp.dev API key");
+        expect(body).not.toContain("APPVITALS_PACKAGES");
+      } else {
+        expect(body).toContain("No package names configured. Set APPVITALS_PACKAGES to a comma separated list.");
+        expect(body).not.toContain("hostedmcp.dev");
+      }
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
+
   it("filters reviews by stars and passes translation", async () => {
     const client = new MockPlayClient();
     const low = await toolGetRecentReviews(ctx({ client }), {

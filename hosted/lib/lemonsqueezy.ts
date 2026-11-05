@@ -201,6 +201,12 @@ export async function handleLemonEvent(opts: {
       "We only store a hash of the key, so keep this email.",
       "",
       `This subscription is for ${product.name}.`,
+      ...(productId === "appvitals" ? [
+        "Register the Android package names you want AppVitals to read:",
+        `https://hostedmcp.dev${product.connectPath}`,
+        "Use the API key above and follow the Play Console permissions steps.",
+        "Solo covers 1 app.",
+      ] : []),
       ...(productId === "merchantops" ? [`Save your store keys at https://hostedmcp.dev${product.connectPath}. Your keys are encrypted and not shown again.`] : []),
       `Point your MCP client at https://hostedmcp.dev${product.mcpPath} with Authorization: Bearer <key>.`,
     ].join("\n"),

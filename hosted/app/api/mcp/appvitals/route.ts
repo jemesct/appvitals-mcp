@@ -2,6 +2,7 @@ import { createAppVitalsServer } from "appvitals-mcp";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { getPlayClient, getRepo } from "@/lib/runtime";
 import { authenticateRequest } from "@/lib/auth";
+import { getProduct } from "@/lib/products";
 import { forwardMcpRequest, recordAuthenticatedToolCall } from "@/lib/mcp-usage";
 
 export const runtime = "nodejs";
@@ -17,6 +18,7 @@ async function handle(req: Request): Promise<Response> {
   const server = createAppVitalsServer({
     client: getPlayClient(),
     packages: auth.entitlement.packages,
+    appRegistrationUrl: `https://hostedmcp.dev${getProduct("appvitals")!.connectPath}`,
     allowWrites: process.env.APPVITALS_ALLOW_WRITES === "true" || process.env.APPVITALS_ALLOW_WRITES === "1",
     reviewHistory: async (query) => {
       const rows = await repo.listReviewSnapshots({
