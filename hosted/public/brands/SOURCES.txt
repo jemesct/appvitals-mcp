@@ -1,0 +1,24 @@
+Official brand marks used on hostedmcp.dev. Not modified beyond resize.
+
+google-play.svg
+  Google Play 2022 prism, as published from Google Play Console
+  https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_Play_2022_icon.svg
+  (Wikimedia reproduction of the official icon)
+
+app-store.png
+  App Store icon from Apple Developer
+  https://developer.apple.com/assets/elements/icons/app-store/app-store-128x128_2x.png
+
+app-store-connect.png
+  App Store Connect icon from Apple
+  https://appstoreconnect.apple.com/access/static/assets/AppStoreConnectIcon-1024.png
+  Resized to 256px for the page.
+
+lemon-squeezy.svg
+  Official Lemon Squeezy mark from their site CDN
+  https://www.lemonsqueezy.com/brand
+  https://cdn.prod.website-files.com/6347244ba8d63489ba51c08e/6347244ba8d63469e851c0d6_footer%20small%20logo.svg
+
+paddle.png
+  Official Paddle spark from paddle.com
+  https://www.paddle.com/images/paddle-spark.png

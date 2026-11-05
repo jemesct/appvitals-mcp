@@ -48,6 +48,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               AppVitals is Google Play. ShipVitals is iOS, via App Store Connect. MerchantOps is Lemon Squeezy and Paddle, not the app stores.
               Google Play and Google Play Console are trademarks of Google LLC. AppVitals is not affiliated with Google.
               App Store, App Store Connect, and TestFlight are trademarks of Apple Inc. ShipVitals is not affiliated with Apple.
+              Lemon Squeezy is a trademark of Lemon Squeezy, LLC. Paddle is a trademark of Paddle.com Market Limited. MerchantOps is not affiliated with Lemon Squeezy or Paddle.
             </span>
           </footer>
         </div>

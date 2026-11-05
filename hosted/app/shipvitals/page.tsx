@@ -1,3 +1,4 @@
+import { ProductTitle, WorksWithAppStore } from "@/components/BrandMarks";
 import Link from "next/link";
 import { ShipExamples } from "@/components/ShipExamples";
 import { getProduct } from "@/lib/products";
@@ -11,7 +12,8 @@ export default function ShipVitalsPage() {
   const product = getProduct("shipvitals");
   return (
     <main>
-      <h1>ShipVitals</h1>
+      <WorksWithAppStore />
+      <ProductTitle brands={["appStore", "appStoreConnect"]}>ShipVitals</ProductTitle>
       <p className="lede">
         ShipVitals is for iOS. It reads App Store Connect: reviews, TestFlight, and version status.
         It does not read Google Play. The hosted plan uses the App Store Connect key you upload,
