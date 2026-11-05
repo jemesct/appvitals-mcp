@@ -3,6 +3,21 @@ import { appLimitFor } from "./products";
 import type { Repository } from "./repo";
 
 const PACKAGE_NAME = /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/;
+const APPLE_APP_ID = /^\d{6,20}$/;
+
+export function invalidResource(productId: string, name: string): string | null {
+  if (productId === "appvitals") {
+    if (!PACKAGE_NAME.test(name)) return `${name} does not look like an Android package name.`;
+    return null;
+  }
+  if (productId === "shipvitals") {
+    if (!APPLE_APP_ID.test(name)) {
+      return `${name} does not look like an Apple app id. Use the numeric id from App Store Connect.`;
+    }
+    return null;
+  }
+  return `Unknown product ${productId}.`;
+}
 
 export function parsePackageNames(raw: string): string[] {
   const names = raw
@@ -23,12 +38,12 @@ export async function addCustomerApps(opts: {
   const auth = await authenticateApiKey(opts.repo, opts.token, opts.productId, opts.now);
   if (!auth.ok) return { ok: false, status: auth.status, message: auth.message };
   if (opts.packageNames.length === 0) {
-    return { ok: false, status: 400, message: "Enter at least one package name." };
+    const noun = opts.productId === "shipvitals" ? "Apple app id" : "package name";
+    return { ok: false, status: 400, message: `Enter at least one ${noun}.` };
   }
   for (const name of opts.packageNames) {
-    if (!PACKAGE_NAME.test(name)) {
-      return { ok: false, status: 400, message: `${name} does not look like an Android package name.` };
-    }
+    const invalid = invalidResource(opts.productId, name);
+    if (invalid) return { ok: false, status: 400, message: invalid };
   }
   const existing = await opts.repo.listApps(auth.entitlement.customerId, opts.productId);
   const merged = new Set(existing.map((app) => app.packageName));

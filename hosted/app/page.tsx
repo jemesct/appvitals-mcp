@@ -32,6 +32,16 @@ export default function HomePage() {
           </p>
         </section>
       ) : null}
+      <section className="card">
+        <h2 style={{ marginTop: 0 }}>ShipVitals</h2>
+        <p>App Store Connect reviews, TestFlight, version status, and sales reports for iOS apps.</p>
+        <p className="muted">
+          Second product on the hub. The open MCP is free to self-host with your own App Store Connect API key. Hosted plans are a separate subscription from AppVitals. A Play and App Store bundle is not sold yet.
+        </p>
+        <p>
+          <Link href="/shipvitals">See ShipVitals</Link>
+        </p>
+      </section>
     </main>
   );
 }

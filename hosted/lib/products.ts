@@ -48,7 +48,41 @@ export const products: ProductDefinition[] = [
       },
     ],
   },
+  {
+    id: "shipvitals",
+    name: "ShipVitals",
+    path: "/shipvitals",
+    connectPath: "/shipvitals/connect",
+    mcpPath: "/api/mcp/shipvitals",
+    summary: "App Store Connect reviews, TestFlight, release status, and sales reports for iOS apps.",
+    trialDays: 7,
+    plans: [
+      {
+        id: "solo",
+        name: "One app",
+        priceUsdMonthly: 9,
+        appLimit: 1,
+        blurb: "Hosted MCP URL and API key for one iOS app on this deployment's App Store Connect team.",
+      },
+      {
+        id: "unlimited",
+        name: "Unlimited apps",
+        priceUsdMonthly: 19,
+        appLimit: null,
+        blurb: "Everything in One app, for every app on this deployment's App Store Connect team.",
+      },
+    ],
+  },
 ];
+
+export function variantEnvName(productId: string, plan: PlanId): string | null {
+  if (!getProduct(productId)) return null;
+  if (productId === "appvitals") {
+    return plan === "solo" ? "LEMONSQUEEZY_VARIANT_SOLO" : "LEMONSQUEEZY_VARIANT_UNLIMITED";
+  }
+  const suffix = plan === "solo" ? "SOLO" : "UNLIMITED";
+  return `LEMONSQUEEZY_VARIANT_${productId.toUpperCase()}_${suffix}`;
+}
 
 export function getProduct(id: string): ProductDefinition | undefined {
   return products.find((product) => product.id === id);

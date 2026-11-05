@@ -1,16 +1,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { generateApiKey } from "./keys";
-import { getProduct, isPlanId, type PlanId } from "./products";
+import { getProduct, isPlanId, products, variantEnvName, type PlanId } from "./products";
 import type { EmailSender } from "./email";
 import type { Repository } from "./repo";
 import type { SubscriptionStatus } from "./products";
-
-const CHECKOUT_VARS = [
-  "LEMONSQUEEZY_API_KEY",
-  "LEMONSQUEEZY_STORE_ID",
-  "LEMONSQUEEZY_VARIANT_SOLO",
-  "LEMONSQUEEZY_VARIANT_UNLIMITED",
-] as const;
 
 export function signLemonBody(rawBody: string, secret: string): string {
   return createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
@@ -24,8 +17,12 @@ export function verifyLemonSignature(rawBody: string, signature: string | null, 
   return timingSafeEqual(Buffer.from(got), Buffer.from(expected));
 }
 
-export function checkoutConfigError(env: NodeJS.ProcessEnv): string | null {
-  const missing = CHECKOUT_VARS.filter((name) => !env[name]);
+export function checkoutConfigError(env: NodeJS.ProcessEnv, productId = "appvitals"): string | null {
+  const variantNames = [variantEnvName(productId, "solo"), variantEnvName(productId, "unlimited")].filter(
+    (name): name is string => Boolean(name),
+  );
+  const required = ["LEMONSQUEEZY_API_KEY", "LEMONSQUEEZY_STORE_ID", ...variantNames];
+  const missing = required.filter((name) => !env[name]);
   if (missing.length === 0) return null;
   return `Lemon Squeezy is not configured (${missing.join(", ")}). Checkout is unavailable until those are set.`;
 }
@@ -36,10 +33,11 @@ export async function createCheckoutUrl(opts: {
   productId: string;
   fetchImpl?: typeof fetch;
 }): Promise<string> {
-  const missing = checkoutConfigError(opts.env);
+  const missing = checkoutConfigError(opts.env, opts.productId);
   if (missing) throw new Error(missing);
-  const variant =
-    opts.plan === "solo" ? opts.env.LEMONSQUEEZY_VARIANT_SOLO : opts.env.LEMONSQUEEZY_VARIANT_UNLIMITED;
+  const variantName = variantEnvName(opts.productId, opts.plan);
+  const variant = variantName ? opts.env[variantName] : undefined;
+  if (!variant) throw new Error("Lemon Squeezy variant is not configured.");
   const response = await (opts.fetchImpl ?? fetch)("https://api.lemonsqueezy.com/v1/checkouts", {
     method: "POST",
     headers: {
@@ -113,8 +111,14 @@ export function planFromLemon(event: LemonEvent, env: NodeJS.ProcessEnv): PlanId
   const custom = event.meta?.custom_data?.plan;
   if (custom && isPlanId(custom)) return custom;
   const variant = event.data?.attributes?.variant_id;
-  if (variant != null && String(variant) === env.LEMONSQUEEZY_VARIANT_SOLO) return "solo";
-  if (variant != null && String(variant) === env.LEMONSQUEEZY_VARIANT_UNLIMITED) return "unlimited";
+  if (variant == null) return null;
+  const id = String(variant);
+  for (const product of products) {
+    for (const plan of ["solo", "unlimited"] as const) {
+      const name = variantEnvName(product.id, plan);
+      if (name && env[name] && id === env[name]) return plan;
+    }
+  }
   return null;
 }
 
@@ -139,7 +143,8 @@ export async function handleLemonEvent(opts: {
   const email = opts.event.data?.attributes?.user_email ?? opts.event.meta?.custom_data?.email;
   if (!email) return { ok: false, message: "Webhook is missing the customer email." };
   const productId = opts.event.meta?.custom_data?.product_id || opts.event.meta?.custom_data?.product || "appvitals";
-  if (!getProduct(productId)) {
+  const product = getProduct(productId);
+  if (!product) {
     return { ok: false, message: `Unknown product ${productId}.` };
   }
   const plan = planFromLemon(opts.event, opts.env);
@@ -177,7 +182,8 @@ export async function handleLemonEvent(opts: {
       "The key is for the whole hostedmcp.dev account. Each product still has its own subscription.",
       "We only store a hash of the key, so keep this email.",
       "",
-      "Point your MCP client at https://hostedmcp.dev/api/mcp/appvitals with Authorization: Bearer <key>.",
+      `This subscription is for ${product.name}.`,
+      `Point your MCP client at https://hostedmcp.dev${product.mcpPath} with Authorization: Bearer <key>.`,
     ].join("\n"),
   });
   return { ok: true, apiKey: key.token };
@@ -197,7 +203,7 @@ export async function handleCheckoutRequest(opts: {
   if (!getProduct(productId)) {
     return { status: 400, body: { error: `Unknown product ${productId}.` } };
   }
-  const missing = checkoutConfigError(opts.env);
+  const missing = checkoutConfigError(opts.env, productId);
   if (missing) return { status: 503, body: { error: missing } };
   try {
     const redirect = await createCheckoutUrl({

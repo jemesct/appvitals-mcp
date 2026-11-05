@@ -8,6 +8,8 @@ coverage
 tsconfig.tsbuildinfo
 hosted/tsconfig.tsbuildinfo
 packages/mcp/tsconfig.tsbuildinfo
+packages/shipvitals-mcp/tsconfig.tsbuildinfo
+*.p8
 .secrets/
 .vercel
 .env*

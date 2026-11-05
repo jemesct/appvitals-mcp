@@ -8,8 +8,8 @@
     "hosted"
   ],
   "scripts": {
-    "typecheck": "tsc -p packages/mcp/tsconfig.json --emitDeclarationOnly && tsc -p packages/mcp/tsconfig.test.json --noEmit && tsc -p hosted --noEmit && tsc -p e2e --noEmit",
-    "build": "npm run build -w appvitals-mcp && npm run build -w hostedmcp",
+    "typecheck": "tsc -p packages/mcp/tsconfig.json --emitDeclarationOnly && tsc -p packages/mcp/tsconfig.test.json --noEmit && tsc -p packages/shipvitals-mcp/tsconfig.json --emitDeclarationOnly && tsc -p packages/shipvitals-mcp/tsconfig.test.json --noEmit && tsc -p hosted --noEmit && tsc -p e2e --noEmit",
+    "build": "npm run build -w appvitals-mcp && npm run build -w shipvitals-mcp && npm run build -w hostedmcp",
     "test": "vitest run",
     "test:e2e": "vitest run --config vitest.e2e.config.ts"
   },

@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   UNIQUE (customer_id, product_id)
 );
 
+-- package_name is the resource id for that product:
+-- an Android application id for AppVitals, or a numeric Apple app id for ShipVitals.
 CREATE TABLE IF NOT EXISTS apps (
   id TEXT PRIMARY KEY,
   customer_id TEXT NOT NULL REFERENCES customers(id),

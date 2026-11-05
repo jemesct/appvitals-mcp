@@ -261,14 +261,130 @@ describe("hosted", () => {
     expect(cronAuthorised("Bearer secret", undefined)).toBe(false);
   });
 
+  it("registers ShipVitals beside AppVitals and keeps their subscriptions apart", async () => {
+    const ship = (await import("../lib/products")).getProduct("shipvitals");
+    expect(ship?.path).toBe("/shipvitals");
+    expect(ship?.mcpPath).toBe("/api/mcp/shipvitals");
+    expect(ship?.plans.map((plan) => plan.priceUsdMonthly)).toEqual([9, 19]);
+
+    const repo = new MemoryRepository();
+    const customer = await repo.upsertCustomerByEmail("ios@example.com");
+    const key = generateApiKey();
+    await repo.insertApiKey({ customerId: customer.id, keyHash: key.keyHash, keyPrefix: key.keyPrefix });
+    await repo.upsertSubscription({
+      customerId: customer.id,
+      productId: "shipvitals",
+      plan: "solo",
+      status: "active",
+      trialEndsAt: null,
+      lsSubscriptionId: "ls-ship",
+    });
+    const shipAuth = await authenticateApiKey(repo, key.token, "shipvitals", new Date("2026-11-04T00:00:00.000Z"));
+    expect(shipAuth.ok).toBe(true);
+    const playAuth = await authenticateApiKey(repo, key.token, "appvitals", new Date("2026-11-04T00:00:00.000Z"));
+    expect(playAuth.ok).toBe(false);
+
+    const saved = await addCustomerApps({
+      repo,
+      token: key.token,
+      productId: "shipvitals",
+      packageNames: ["1234567890"],
+      now: new Date("2026-11-04T00:00:00.000Z"),
+    });
+    expect(saved.ok).toBe(true);
+    const bundle = await addCustomerApps({
+      repo,
+      token: key.token,
+      productId: "shipvitals",
+      packageNames: ["com.example.ios"],
+      now: new Date("2026-11-04T00:00:00.000Z"),
+    });
+    expect(bundle.ok).toBe(false);
+    if (!bundle.ok) expect(bundle.message).toContain("Apple app id");
+  });
+
+  it("checks out ShipVitals against its own Lemon Squeezy variants", async () => {
+    const missing = await handleCheckoutRequest({
+      requestUrl: "https://hostedmcp.dev/api/checkout?plan=solo&product=shipvitals",
+      env: {
+        ...process.env,
+        LEMONSQUEEZY_API_KEY: "key",
+        LEMONSQUEEZY_STORE_ID: "1",
+        LEMONSQUEEZY_VARIANT_SOLO: "111",
+        LEMONSQUEEZY_VARIANT_UNLIMITED: "222",
+        LEMONSQUEEZY_VARIANT_SHIPVITALS_SOLO: "",
+        LEMONSQUEEZY_VARIANT_SHIPVITALS_UNLIMITED: "",
+      },
+    });
+    expect(missing.status).toBe(503);
+    if ("body" in missing) {
+      expect(missing.body.error).toContain("LEMONSQUEEZY_VARIANT_SHIPVITALS_SOLO");
+      expect(missing.body.error).not.toContain("LEMONSQUEEZY_VARIANT_SOLO,");
+    }
+
+    let seen = "";
+    const ready = await handleCheckoutRequest({
+      requestUrl: "https://hostedmcp.dev/api/checkout?plan=unlimited&product=shipvitals",
+      env: {
+        ...process.env,
+        LEMONSQUEEZY_API_KEY: "key",
+        LEMONSQUEEZY_STORE_ID: "9",
+        LEMONSQUEEZY_VARIANT_SHIPVITALS_SOLO: "333",
+        LEMONSQUEEZY_VARIANT_SHIPVITALS_UNLIMITED: "444",
+      },
+      fetchImpl: async (_url, init) => {
+        seen = String(init?.body ?? "");
+        return new Response(JSON.stringify({ data: { attributes: { url: "https://checkout.example/ship" } } }), {
+          status: 200,
+        });
+      },
+    });
+    expect(ready).toEqual({ status: 302, redirect: "https://checkout.example/ship" });
+    expect(seen).toContain('"id":"444"');
+    expect(seen).toContain("shipvitals");
+  });
+
+  it("issues the hub key email for a ShipVitals subscription", async () => {
+    const repo = new MemoryRepository();
+    const email = new MemoryEmailSender();
+    const created = await handleLemonEvent({
+      repo,
+      email,
+      now: new Date("2026-11-04T00:00:00.000Z"),
+      env: {
+        ...process.env,
+        LEMONSQUEEZY_VARIANT_SHIPVITALS_SOLO: "333",
+        LEMONSQUEEZY_VARIANT_SHIPVITALS_UNLIMITED: "444",
+      },
+      event: {
+        meta: { event_name: "subscription_created", custom_data: { product_id: "shipvitals" } },
+        data: {
+          id: "sub_ship",
+          attributes: { status: "active", user_email: "ios@example.com", variant_id: 333 },
+        },
+      },
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    expect(email.sent[0]?.text).toContain("https://hostedmcp.dev/api/mcp/shipvitals");
+    expect(email.sent[0]?.text).toContain("ShipVitals");
+    const subscription = await repo.findSubscriptionByLsId("sub_ship");
+    expect(subscription?.productId).toBe("shipvitals");
+    expect(subscription?.plan).toBe("solo");
+  });
+
   it("keeps user-facing copy free of em dashes", () => {
     const files = [
       "README.md",
       "packages/mcp/README.md",
+      "packages/shipvitals-mcp/README.md",
       "hosted/app/page.tsx",
       "hosted/app/layout.tsx",
       "hosted/app/appvitals/page.tsx",
       "hosted/app/appvitals/connect/page.tsx",
+      "hosted/app/shipvitals/page.tsx",
+      "hosted/app/shipvitals/connect/page.tsx",
+      "hosted/components/ShipExamples.tsx",
       "hosted/app/account/page.tsx",
     ];
     for (const file of files) {
