@@ -50,11 +50,20 @@ export class MockPlayClient implements PlayClient {
   }
 
   async queryMetricSet(input: QueryMetricInput): Promise<DailyMetric[]> {
-    const metrics: Record<string, number> = {};
-    for (const name of input.metrics) {
-      metrics[name] = sampleMetric(name);
-    }
-    return [{ date: "2026-11-03", metrics }];
+    const dimension = input.dimensions?.[0];
+    const slices = dimensionSlices(dimension);
+    return slices.map((slice, index) => {
+      const metrics: Record<string, number> = {};
+      for (const name of input.metrics) {
+        metrics[name] = sampleMetric(name, index);
+      }
+      const row: DailyMetric = { date: "2026-11-03", metrics };
+      if (dimension && slice) {
+        row.dimensions = { [dimension]: slice.value };
+        if (slice.label) row.dimensionLabels = { [dimension]: slice.label };
+      }
+      return row;
+    });
   }
 
   async insertEdit(_packageName: string): Promise<{ editId: string }> {
@@ -74,6 +83,17 @@ export class MockPlayClient implements PlayClient {
           },
         ],
       },
+      {
+        track: "internal",
+        releases: [
+          {
+            name: "1.4.1",
+            status: "completed",
+            versionCodes: [43],
+            userFraction: null,
+          },
+        ],
+      },
     ];
   }
 
@@ -86,18 +106,41 @@ export class MockPlayClient implements PlayClient {
   }
 }
 
-function sampleMetric(name: string): number {
+function dimensionSlices(dimension: string | undefined): Array<{ value: string; label?: string } | null> {
+  switch (dimension) {
+    case "deviceModel":
+      return [
+        { value: "google/coral", label: "Pixel 4 XL" },
+        { value: "samsung/b0q", label: "Galaxy S22 Ultra" },
+      ];
+    case "apiLevel":
+      return [
+        { value: "34", label: "Android 14" },
+        { value: "33", label: "Android 13" },
+      ];
+    case "countryCode":
+      return [
+        { value: "US", label: "United States" },
+        { value: "DE", label: "Germany" },
+      ];
+    default:
+      return [null];
+  }
+}
+
+function sampleMetric(name: string, slice = 0): number {
+  const bump = slice * 0.001;
   switch (name) {
     case "userPerceivedCrashRate":
-      return 0.004;
+      return slice === 1 ? 0.014 : 0.004;
     case "crashRate":
-      return 0.003;
+      return 0.003 + bump;
     case "userPerceivedAnrRate":
-      return 0.002;
+      return 0.002 + bump;
     case "anrRate":
-      return 0.001;
+      return 0.001 + bump;
     case "distinctUsers":
-      return 1200;
+      return slice === 0 ? 1200 : 400;
     case "slowStartRate":
       return 0.01;
     case "excessiveWakeupRate":

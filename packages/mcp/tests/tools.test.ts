@@ -11,9 +11,13 @@ import { parseMetricRows, parseReviews, parseTracks } from "../src/play/parse.js
 import { createAppVitalsServer } from "../src/server.js";
 import {
   toolCheck16kb,
+  toolGetPrelaunchReport,
+  toolGetRatingsByCountry,
   toolGetRatingsSummary,
   toolGetRecentReviews,
+  toolGetUserTrends,
   toolGetVitals,
+  toolGetVitalsBreakdown,
   toolListApps,
   toolListReleases,
   toolReplyToReview,
@@ -65,6 +69,13 @@ describe("fixtures", () => {
     const tracks = parseTracks(readFixture("tracks.json"));
     expect(tracks[0]?.releases[0]?.versionCodes).toEqual([41, 42]);
     expect(tracks[0]?.releases[0]?.userFraction).toBe(0.2);
+    const sliced = parseMetricRows(readFixture("crash-metrics-by-country.json"));
+    expect(sliced).toHaveLength(3);
+    const germany = sliced.find((row) => row.dimensions?.countryCode === "DE");
+    expect(germany?.date).toBe("2026-11-03");
+    expect(germany?.dimensionLabels?.countryCode).toBe("Germany");
+    expect(germany?.metrics.userPerceivedCrashRate).toBe(0.02);
+    expect(sliced.filter((row) => row.dimensions?.countryCode === "US")).toHaveLength(2);
   });
 });
 
@@ -189,6 +200,91 @@ describe("tools", () => {
     expect(text(result)).toContain("1.09%");
   });
 
+  it("breaks vitals down by country and flags a bad slice", async () => {
+    const result = await toolGetVitalsBreakdown(ctx(), {
+      packageName: "com.example.app",
+      dimension: "country",
+      days: 7,
+    });
+    expect(result.isError).toBeUndefined();
+    expect(text(result)).toContain("countryCode");
+    expect(text(result)).toContain("United States");
+    expect(text(result)).toContain("DE");
+    expect(text(result)).toContain("userPerceivedCrashRate");
+    expect(text(result)).toContain('"slice": "DE"');
+  });
+
+  it("maps device and androidVersion to Play dimension names", async () => {
+    const seen: string[] = [];
+    const base = new MockPlayClient();
+    const client = fakeClient({
+      async queryMetricSet(input) {
+        seen.push(...(input.dimensions ?? []));
+        return base.queryMetricSet(input);
+      },
+    });
+    await toolGetVitalsBreakdown(ctx({ client }), { packageName: "com.example.app", dimension: "device" });
+    await toolGetVitalsBreakdown(ctx({ client }), { packageName: "com.example.app", dimension: "androidVersion" });
+    expect(seen).toContain("deviceModel");
+    expect(seen).toContain("apiLevel");
+  });
+
+  it("rejects an unknown vitals dimension", async () => {
+    const result = await toolGetVitalsBreakdown(ctx(), {
+      packageName: "com.example.app",
+      dimension: "carrier" as "country",
+    });
+    expect(result.isError).toBe(true);
+    expect(text(result)).toContain("device, androidVersion, or country");
+  });
+
+  it("says pre-launch findings are not on the public APIs and still lists test tracks", async () => {
+    const result = await toolGetPrelaunchReport(ctx(), { packageName: "com.example.app" });
+    expect(result.isError).toBeUndefined();
+    expect(text(result)).toContain('"preLaunchReportAvailable": false');
+    expect(text(result)).toContain("does not expose pre-launch report findings");
+    expect(text(result)).toContain("internal");
+    expect(text(result)).toContain("43");
+    expect(text(result)).toContain('"testing": false');
+  });
+
+  it("falls back to ANR distinctUsers when crash metrics fail", async () => {
+    const client = fakeClient({
+      async queryMetricSet(input) {
+        if (input.metricSet === "crashRateMetricSet") {
+          throw new PlayApiError(404, "not found", null, input.packageName);
+        }
+        return [{ date: "2026-11-03", metrics: { distinctUsers: 88 } }];
+      },
+    });
+    const result = await toolGetUserTrends(ctx({ client }), { packageName: "com.example.app" });
+    expect(result.isError).toBeUndefined();
+    expect(text(result)).toContain("anrRateMetricSet");
+    expect(text(result)).toContain("88");
+  });
+
+  it("returns vitals distinctUsers as the user trend and does not invent installs", async () => {
+    const result = await toolGetUserTrends(ctx(), { packageName: "com.example.app", days: 14 });
+    expect(result.isError).toBeUndefined();
+    expect(text(result)).toContain("distinctUsers");
+    expect(text(result)).toContain('"installUninstallAvailable": false');
+    expect(text(result)).toContain("stats/installs");
+  });
+
+  it("groups recent reviews by language and refuses a country filter", async () => {
+    const refused = await toolGetRatingsByCountry(ctx(), {
+      packageName: "com.example.app",
+      countryCode: "US",
+    });
+    expect(refused.isError).toBe(true);
+    expect(text(refused)).toContain("no country field");
+    const result = await toolGetRatingsByCountry(ctx(), { packageName: "com.example.app" });
+    expect(result.isError).toBeUndefined();
+    expect(text(result)).toContain('"language": "en"');
+    expect(text(result)).toContain('"countryAvailable": false');
+    expect(text(result)).toContain("reviewerLanguage");
+  });
+
   it("deletes the edit even when listing tracks fails", async () => {
     const deleted: string[] = [];
     const client = fakeClient({
@@ -248,10 +344,14 @@ describe("tools", () => {
     const names = listed.tools.map((tool) => tool.name).sort();
     expect(names).toEqual([
       "check_16kb_readiness",
+      "get_prelaunch_report",
+      "get_ratings_by_country",
       "get_ratings_summary",
       "get_recent_reviews",
       "get_review_history",
+      "get_user_trends",
       "get_vitals",
+      "get_vitals_breakdown",
       "list_apps",
       "list_releases",
       "reply_to_review",

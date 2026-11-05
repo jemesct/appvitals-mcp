@@ -42,25 +42,74 @@ function metricValue(entry: unknown): { name: string; value: number } | null {
   return { name, value };
 }
 
+function parseDimensions(entries: unknown): {
+  values: Record<string, string>;
+  labels: Record<string, string>;
+} | null {
+  if (!Array.isArray(entries) || entries.length === 0) return null;
+  const values: Record<string, string> = {};
+  const labels: Record<string, string> = {};
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object") continue;
+    const record = entry as {
+      dimension?: string;
+      stringValue?: string;
+      int64Value?: string | number;
+      valueLabel?: string;
+    };
+    if (!record.dimension) continue;
+    const value =
+      record.stringValue != null && record.stringValue !== ""
+        ? record.stringValue
+        : record.int64Value != null
+          ? String(record.int64Value)
+          : null;
+    if (value == null) continue;
+    values[record.dimension] = value;
+    if (record.valueLabel) labels[record.dimension] = record.valueLabel;
+  }
+  return Object.keys(values).length > 0 ? { values, labels } : null;
+}
+
+function dimensionKey(values: Record<string, string> | undefined): string {
+  if (!values) return "";
+  return Object.entries(values)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}=${value}`)
+    .join("|");
+}
+
 export function parseMetricRows(payload: unknown): DailyMetric[] {
   const rows = (payload as { rows?: unknown[] } | null)?.rows;
   if (!Array.isArray(rows)) return [];
-  const byDate = new Map<string, Record<string, number>>();
+  const byKey = new Map<string, DailyMetric>();
   for (const row of rows) {
     if (!row || typeof row !== "object") continue;
-    const record = row as { startTime?: GoogleTime; metrics?: unknown[] };
+    const record = row as { startTime?: GoogleTime; metrics?: unknown[]; dimensions?: unknown[] };
     const date = dateFromGoogle(record.startTime);
     if (!date) continue;
-    const metrics = byDate.get(date) ?? {};
+    const parsedDimensions = parseDimensions(record.dimensions);
+    const key = `${date}|${dimensionKey(parsedDimensions?.values)}`;
+    const existing = byKey.get(key);
+    const metrics = existing?.metrics ?? {};
     for (const entry of record.metrics ?? []) {
       const parsed = metricValue(entry);
       if (parsed) metrics[parsed.name] = parsed.value;
     }
-    byDate.set(date, metrics);
+    const next: DailyMetric = { date, metrics };
+    if (parsedDimensions) {
+      next.dimensions = parsedDimensions.values;
+      if (Object.keys(parsedDimensions.labels).length > 0) {
+        next.dimensionLabels = parsedDimensions.labels;
+      }
+    }
+    byKey.set(key, next);
   }
-  return [...byDate.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, metrics]) => ({ date, metrics }));
+  return [...byKey.values()].sort((a, b) => {
+    const dateCmp = a.date.localeCompare(b.date);
+    if (dateCmp !== 0) return dateCmp;
+    return dimensionKey(a.dimensions).localeCompare(dimensionKey(b.dimensions));
+  });
 }
 
 export function parseReviews(payload: unknown): { reviews: NormalizedReview[]; nextPageToken?: string } {

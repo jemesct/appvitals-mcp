@@ -29,6 +29,8 @@ export interface ReplyInput {
 export interface DailyMetric {
   date: string;
   metrics: Record<string, number>;
+  dimensions?: Record<string, string>;
+  dimensionLabels?: Record<string, string>;
 }
 
 export type MetricSetName =
@@ -37,11 +39,14 @@ export type MetricSetName =
   | "slowStartRateMetricSet"
   | "excessiveWakeupRateMetricSet";
 
+export type VitalsDimension = "device" | "androidVersion" | "country";
+
 export interface QueryMetricInput {
   packageName: string;
   metricSet: MetricSetName;
   days: number;
   metrics: string[];
+  dimensions?: string[];
 }
 
 export interface ReleaseInfo {

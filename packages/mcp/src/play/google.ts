@@ -91,18 +91,28 @@ export class GooglePlayClient implements PlayClient {
     } catch {
       latestEnd = undefined;
     }
-    const payload = await this.request(
-      url,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          timelineSpec: timelineSpec(input.days, this.now(), latestEnd),
-          metrics: input.metrics,
-        }),
-      },
-      input.packageName,
-    );
-    return parseMetricRows(payload);
+    const rows: DailyMetric[] = [];
+    let pageToken: string | undefined;
+    for (let page = 0; page < 10; page += 1) {
+      const payload = await this.request(
+        url,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            timelineSpec: timelineSpec(input.days, this.now(), latestEnd),
+            metrics: input.metrics,
+            ...(input.dimensions?.length ? { dimensions: input.dimensions, pageSize: 1000 } : {}),
+            ...(pageToken ? { pageToken } : {}),
+          }),
+        },
+        input.packageName,
+      );
+      rows.push(...parseMetricRows(payload));
+      const next = (payload as { nextPageToken?: string } | null)?.nextPageToken;
+      if (!next) break;
+      pageToken = next;
+    }
+    return rows;
   }
 
   async insertEdit(packageName: string): Promise<{ editId: string }> {
