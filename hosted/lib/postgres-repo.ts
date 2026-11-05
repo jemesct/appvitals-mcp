@@ -5,6 +5,7 @@ import type {
   AlertSent,
   ApiKeyRecord,
   AppRecord,
+  AscCredentialRecord,
   Customer,
   RecordToolEventInput,
   Repository,
@@ -418,11 +419,53 @@ class PostgresRepository implements Repository {
     `;
     return rows.map((row) => mapToolEvent(row));
   }
+
+  async getAscCredentials(customerId: string): Promise<AscCredentialRecord | null> {
+    await this.ready();
+    const [row] = await this.sql`
+      SELECT id, customer_id, iv, auth_tag, ciphertext, updated_at
+      FROM asc_credentials WHERE customer_id = ${customerId}
+    `;
+    return row ? mapAsc(row) : null;
+  }
+
+  async upsertAscCredentials(input: {
+    customerId: string;
+    iv: string;
+    authTag: string;
+    ciphertext: string;
+    updatedAt: string;
+  }): Promise<AscCredentialRecord> {
+    await this.ready();
+    const credentialId = crypto.randomUUID();
+    const [row] = await this.sql`
+      INSERT INTO asc_credentials (id, customer_id, iv, auth_tag, ciphertext, updated_at)
+      VALUES (${credentialId}, ${input.customerId}, ${input.iv}, ${input.authTag}, ${input.ciphertext}, ${input.updatedAt})
+      ON CONFLICT (customer_id) DO UPDATE SET
+        iv = EXCLUDED.iv,
+        auth_tag = EXCLUDED.auth_tag,
+        ciphertext = EXCLUDED.ciphertext,
+        updated_at = EXCLUDED.updated_at
+      RETURNING id, customer_id, iv, auth_tag, ciphertext, updated_at
+    `;
+    return mapAsc(row);
+  }
 }
 
 function clampLimit(limit: number | undefined): number {
   if (limit == null || !Number.isFinite(limit)) return 100;
   return Math.min(500, Math.max(1, Math.floor(limit)));
+}
+
+function mapAsc(row: any): AscCredentialRecord {
+  return {
+    id: row.id,
+    customerId: row.customer_id,
+    iv: row.iv,
+    authTag: row.auth_tag,
+    ciphertext: row.ciphertext,
+    updatedAt: iso(row.updated_at) ?? new Date().toISOString(),
+  };
 }
 
 function mapToolEvent(row: any): ToolEvent {

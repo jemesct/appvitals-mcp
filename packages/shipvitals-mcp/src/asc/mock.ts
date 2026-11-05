@@ -99,6 +99,10 @@ export const MISSING_CREDENTIALS = [
 ].join(" ");
 
 export class MockAscClient implements AscClient {
+  async listApps(): Promise<Array<{ id: string; name: string | null; bundleId: string | null }>> {
+    return [{ id: "1234567890", name: "Example", bundleId: "com.example.ios" }];
+  }
+
   replies: Array<{ reviewId: string; responseBody: string }> = [];
 
   async listReviews(input: {
@@ -214,6 +218,10 @@ export class UnavailableAscClient implements AscClient {
 
   private fail(): never {
     throw new Error(this.reason);
+  }
+
+  listApps(): Promise<Array<{ id: string; name: string | null; bundleId: string | null }>> {
+    this.fail();
   }
 
   listReviews(): Promise<CustomerReview[]> {

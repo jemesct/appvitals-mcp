@@ -200,6 +200,7 @@ describe("shipvitals tools", () => {
       getSalesSummary: (input) => base.getSalesSummary(input),
       getFinanceSummary: (input) => base.getFinanceSummary(input),
       getPerfSummary: (appId) => base.getPerfSummary(appId),
+      listApps: () => base.listApps(),
     };
     const result = await toolListReviews(ctx({ client }), { appId: "1234567890" });
     expect(result.isError).toBe(true);

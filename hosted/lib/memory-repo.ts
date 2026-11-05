@@ -4,6 +4,7 @@ import type {
   AlertSent,
   ApiKeyRecord,
   AppRecord,
+  AscCredentialRecord,
   Customer,
   RecordToolEventInput,
   Repository,
@@ -27,6 +28,7 @@ export class MemoryRepository implements Repository {
   vitals: VitalsSnapshot[] = [];
   alerts: AlertSent[] = [];
   toolEvents: ToolEvent[] = [];
+  ascCredentials: AscCredentialRecord[] = [];
 
   async getCustomer(customerId: string): Promise<Customer | null> {
     return this.customers.find((customer) => customer.id === customerId) ?? null;
@@ -258,6 +260,30 @@ export class MemoryRepository implements Repository {
       .filter((row) => (input.productId ? row.productId === input.productId : true))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
       .slice(0, limit);
+  }
+
+  async getAscCredentials(customerId: string): Promise<AscCredentialRecord | null> {
+    return this.ascCredentials.find((row) => row.customerId === customerId) ?? null;
+  }
+
+  async upsertAscCredentials(input: {
+    customerId: string;
+    iv: string;
+    authTag: string;
+    ciphertext: string;
+    updatedAt: string;
+  }): Promise<AscCredentialRecord> {
+    const existing = this.ascCredentials.find((row) => row.customerId === input.customerId);
+    if (existing) {
+      existing.iv = input.iv;
+      existing.authTag = input.authTag;
+      existing.ciphertext = input.ciphertext;
+      existing.updatedAt = input.updatedAt;
+      return existing;
+    }
+    const row: AscCredentialRecord = { id: id(), ...input };
+    this.ascCredentials.push(row);
+    return row;
   }
 }
 

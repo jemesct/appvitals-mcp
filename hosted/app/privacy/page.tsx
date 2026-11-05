@@ -8,9 +8,7 @@ export default function PrivacyPage() {
     <main>
       <h1>Privacy</h1>
       <p className="lede">
-        hostedmcp.dev is run by builtby_James. This covers the hosted site and hosted AppVitals.
-        ShipVitals is the open source App Store Connect MCP. It is not a hosted multi-tenant
-        product, and a copy you run yourself does not send data here.
+        hostedmcp.dev is run by builtby_James. AppVitals is the hosted Google Play product. ShipVitals is the hosted iOS product: you upload your own App Store Connect key. MerchantOps is self-hosted for now. A copy of an MCP you run yourself does not send data here.
       </p>
       <p className="muted">Last updated 5 November 2026.</p>
 
@@ -31,11 +29,11 @@ export default function PrivacyPage() {
         prefix. We cannot show the full key again. The prefix is enough for us to find an account.
       </p>
 
-      <h2>Play data</h2>
+      <h2>Google Play</h2>
       <p>
         Hosted AppVitals does not ask you to upload a Google service account JSON. The server uses
         a service account we operate. You invite that account in Play Console, and you send us the
-        Android package names. We store those names.
+        Android package names. We store those names. This is Google Play data, not App Store Connect.
       </p>
       <p>
         We also store the reviews Google returns (text, star rating, author name, and time) and the
@@ -46,17 +44,18 @@ export default function PrivacyPage() {
 
       <h2>App Store Connect</h2>
       <p>
-        We do not offer a public hosted ShipVitals, and we do not hold a shared App Store Connect
-        key for customers. We do not ask you to upload a <code>.p8</code>, and we do not store Apple
-        app ids for you. Self-host the open source MCP if you want App Store Connect in an agent.
-        That key stays on your machine.
+        Hosted ShipVitals is iOS only. You upload your App Store Connect Key ID, Issuer ID, <code>.p8</code>, and an optional vendor number. We encrypt that bundle with AES-256-GCM before it is stored. The master key stays in <code>SHIPVITALS_CREDENTIALS_KEY</code> on the server. We decrypt it only to call Apple for your account. We do not return the <code>.p8</code> after save, and we do not use one customer&apos;s key for another customer. Sales and finance reports use the vendor number you saved, or they stay off.
+      </p>
+      <p>
+        MerchantOps talks to Lemon Squeezy and Paddle, not Apple or Google. It is not a hosted product yet. If you self-host it, those store API keys stay on your machine.
       </p>
 
       <h2>Usage</h2>
       <p>
         On a hosted MCP call we log the time, the tool name, the 8 character key prefix, the
-        customer id, whether it succeeded, and the latency. Today that is the AppVitals route. We
-        do not log the arguments, the review text, or the full API key.
+        customer id, whether it succeeded, and the latency. That covers AppVitals (Google Play) and
+        ShipVitals (iOS). We do not log the arguments, the review text, the <code>.p8</code>, or the
+        full API key.
       </p>
 
       <h2>Email delivery</h2>

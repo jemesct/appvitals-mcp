@@ -80,6 +80,15 @@ export interface ToolEvent {
   createdAt: string;
 }
 
+export interface AscCredentialRecord {
+  id: string;
+  customerId: string;
+  iv: string;
+  authTag: string;
+  ciphertext: string;
+  updatedAt: string;
+}
+
 export interface RecordToolEventInput {
   productId: string;
   customerId: string;
@@ -130,4 +139,12 @@ export interface Repository {
   recordAlert(input: Omit<AlertSent, "id">): Promise<{ inserted: boolean }>;
   recordToolEvent(input: RecordToolEventInput): Promise<ToolEvent>;
   listToolEvents(input?: { customerId?: string; productId?: string; limit?: number }): Promise<ToolEvent[]>;
+  getAscCredentials(customerId: string): Promise<AscCredentialRecord | null>;
+  upsertAscCredentials(input: {
+    customerId: string;
+    iv: string;
+    authTag: string;
+    ciphertext: string;
+    updatedAt: string;
+  }): Promise<AscCredentialRecord>;
 }

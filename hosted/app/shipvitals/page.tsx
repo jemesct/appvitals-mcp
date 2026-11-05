@@ -1,19 +1,21 @@
 import Link from "next/link";
 import { ShipExamples } from "@/components/ShipExamples";
+import { getProduct } from "@/lib/products";
 
 export const metadata = {
-  title: "ShipVitals · hostedmcp.dev",
-  description: "Open source MCP for App Store Connect reviews, TestFlight, and release status.",
+  title: "ShipVitals · iOS · hostedmcp.dev",
+  description: "iOS App Store Connect reviews, TestFlight, and release status in your MCP client.",
 };
 
 export default function ShipVitalsPage() {
+  const product = getProduct("shipvitals");
   return (
     <main>
       <h1>ShipVitals</h1>
       <p className="lede">
-        App Store Connect is a lot of clicks when you want recent reviews, a version state, or what
-        TestFlight testers just sent. ShipVitals is an open source MCP server that pulls those into
-        the agent you already use. You run it with your own API key.
+        ShipVitals is for iOS. It reads App Store Connect: reviews, TestFlight, and version status.
+        It does not read Google Play. The hosted plan uses the App Store Connect key you upload,
+        not a key we share between customers.
       </p>
       <h2>What it does</h2>
       <ul>
@@ -40,16 +42,28 @@ export default function ShipVitalsPage() {
       <ShipExamples />
       <h2>Run it yourself</h2>
       <p>
-        The MCP is in this repo (<code>packages/shipvitals-mcp</code>) under the MIT licence. You run it with your own Issuer ID, Key ID, and <code>.p8</code>. No account here, no fee.{" "}
-        <Link href="/shipvitals/connect">Self-host notes</Link>.
+        The MCP is in this repo (<code>packages/shipvitals-mcp</code>) under the MIT licence. You can run it with your own Issuer ID, Key ID, and <code>.p8</code>, with no account here.
       </p>
-      <h2>Not a hosted plan</h2>
+      <h2>Hosted plan</h2>
       <p>
-        We do not sell ShipVitals, and we do not host a shared App Store Connect key for customers. There is no trial button and no Lemon Squeezy checkout. This site does not take Apple app ids or a <code>.p8</code>.
+        Soft is US$9 a month for one iOS app. Team is US$19 a month for every iOS app on your key. 7 day trial. Checkout is Lemon Squeezy. After checkout,{" "}
+        <Link href="/shipvitals/connect">save your App Store Connect key</Link>. We encrypt it and do not show the <code>.p8</code> again. Sales and finance reports run only if you also save your vendor number.
       </p>
-      <p>
-        AppVitals, for Google Play, is the hosted product. A Play and App Store bundle is not a checkout option.
-      </p>
+      <p>AppVitals is the Google Play product. A Play and App Store bundle is not a checkout option.</p>
+      {product ? (
+        <div className="prices">
+          {product.plans.map((plan) => (
+            <article className="card" key={plan.id}>
+              <h3 style={{ margin: 0 }}>{plan.name}</h3>
+              <p className="price">US${plan.priceUsdMonthly}/mo</p>
+              <p>{plan.blurb}</p>
+              <a className="button" href={`/api/checkout?plan=${plan.id}&product=shipvitals`}>
+                Start trial
+              </a>
+            </article>
+          ))}
+        </div>
+      ) : null}
     </main>
   );
 }

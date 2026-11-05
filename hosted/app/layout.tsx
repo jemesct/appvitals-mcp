@@ -10,7 +10,7 @@ const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   title: "hostedmcp.dev",
-  description: "A small hub for niche MCP servers. AppVitals for Google Play. ShipVitals is the open source App Store Connect MCP.",
+  description: "AppVitals for Google Play. ShipVitals for iOS and App Store Connect. MerchantOps for Lemon Squeezy and Paddle.",
   metadataBase: new URL("https://hostedmcp.dev"),
 };
 
@@ -27,6 +27,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <nav>
               <Link href="/appvitals">AppVitals</Link>
               <Link href="/shipvitals">ShipVitals</Link>
+              <Link href="/merchantops">MerchantOps</Link>
               <Link href="/account">Account</Link>
             </nav>
           </header>
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <Link href="/terms">Terms</Link>
             </span>
             <span className="legal">
+              AppVitals is Google Play. ShipVitals is iOS, via App Store Connect. MerchantOps is Lemon Squeezy and Paddle, not the app stores.
               Google Play and Google Play Console are trademarks of Google LLC. AppVitals is not affiliated with Google.
               App Store, App Store Connect, and TestFlight are trademarks of Apple Inc. ShipVitals is not affiliated with Apple.
             </span>

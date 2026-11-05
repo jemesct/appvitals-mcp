@@ -44,6 +44,17 @@ export class AppleAscClient implements AscClient {
 
   constructor(private readonly opts: AppleAscClientOptions) {}
 
+  async listApps(): Promise<Array<{ id: string; name: string | null; bundleId: string | null }>> {
+    const body = await this.getOkJson("/v1/apps?limit=200", "Listing apps");
+    return resourceList(body)
+      .map((resource) => ({
+        id: resource.id ?? "",
+        name: stringAttr(resource, "name"),
+        bundleId: stringAttr(resource, "bundleId"),
+      }))
+      .filter((app) => app.id.length > 0);
+  }
+
   async listReviews(input: {
     appId: string;
     limit?: number;

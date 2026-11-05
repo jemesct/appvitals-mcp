@@ -8,8 +8,7 @@ export default function HomePage() {
     <main>
       <h1>hostedmcp.dev</h1>
       <p className="lede">
-        A small hub for niche MCP servers we host, so you can plug them into Claude, Cursor, or
-        anything else that speaks MCP.
+        A small hub for niche MCP servers. AppVitals is Google Play. ShipVitals is iOS, via App Store Connect. MerchantOps is Lemon Squeezy and Paddle.
       </p>
       <p>
         Each product is open core. The MCP that talks to the service is open source and free to
@@ -22,7 +21,7 @@ export default function HomePage() {
           <h2 style={{ marginTop: 0, display: "block", width: "fit-content" }}>{first.name}</h2>
           <p>{first.summary}</p>
           <p className="muted">
-            First product on the hub. It reads Play reviews, crash and ANR rates, and releases.
+            Google Play only. It reads Play Console reviews, crash and ANR rates, and releases.
             Google only keeps about 7 days of reviews, so the hosted plans snapshot them daily and keep the history.
           </p>
           <p>
@@ -34,12 +33,22 @@ export default function HomePage() {
       ) : null}
       <section className="card">
         <h2 style={{ marginTop: 0 }}>ShipVitals</h2>
-        <p>App Store Connect reviews, TestFlight, and version status for iOS apps.</p>
+        <p>iOS only. App Store Connect reviews, TestFlight, and version status. Not Google Play.</p>
         <p className="muted">
-          Open source, and not a hosted plan. Run it with your own App Store Connect API key. We do not sell access to a shared key, and there is no checkout.
+          Hosted plans use the App Store Connect key you upload. It is encrypted, and it is not shared with other customers. You can also self-host the open MCP.
         </p>
         <p>
           <Link href="/shipvitals">See ShipVitals</Link>
+        </p>
+      </section>
+      <section className="card">
+        <h2 style={{ marginTop: 0 }}>MerchantOps</h2>
+        <p>Lemon Squeezy and Paddle: MRR, subscriptions, churn, failed payments, refunds, licence keys, and discounts.</p>
+        <p className="muted">
+          Store ops, not App Store Connect and not Google Play. The open-source package is private for now. Self-host it with your own store keys. There is no hosted checkout yet.
+        </p>
+        <p>
+          <Link href="/merchantops">See MerchantOps</Link>
         </p>
       </section>
     </main>
