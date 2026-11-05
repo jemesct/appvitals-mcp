@@ -13,8 +13,7 @@ export default function AppVitalsPage() {
   if (!product) return null;
   return (
     <main>
-      <WorksWithPlay />
-      <ProductTitle brands={["googlePlay"]}>AppVitals</ProductTitle>
+      <ProductTitle worksWith={<WorksWithPlay />}>AppVitals</ProductTitle>
       <p className="lede">
         AppVitals is Google Play. It reads Play Console for Android apps: reviews, crash and ANR rates, and releases. It does not read iOS or App Store Connect. Play Console is about four clicks deep for every app, and the reviews API only keeps seven days.
       </p>
