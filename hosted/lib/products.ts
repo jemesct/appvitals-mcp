@@ -19,6 +19,8 @@ export interface ProductDefinition {
   mcpPath: string;
   summary: string;
   trialDays: number;
+  /** Public Lemon Squeezy checkout. Off when the product must not be sold against a shared credential. */
+  forSale: boolean;
   plans: ProductPlan[];
 }
 
@@ -31,6 +33,7 @@ export const products: ProductDefinition[] = [
     mcpPath: "/api/mcp/appvitals",
     summary: "Play reviews, crash and ANR rates, and releases for Android apps.",
     trialDays: 7,
+    forSale: true,
     plans: [
       {
         id: "solo",
@@ -54,24 +57,10 @@ export const products: ProductDefinition[] = [
     path: "/shipvitals",
     connectPath: "/shipvitals/connect",
     mcpPath: "/api/mcp/shipvitals",
-    summary: "App Store Connect reviews, TestFlight, release status, and sales reports for iOS apps.",
+    summary: "Open source MCP for App Store Connect. Self-host it with your own API key. Not a hosted plan.",
     trialDays: 7,
-    plans: [
-      {
-        id: "solo",
-        name: "One app",
-        priceUsdMonthly: 9,
-        appLimit: 1,
-        blurb: "Hosted MCP URL and API key for one iOS app on this deployment's App Store Connect team.",
-      },
-      {
-        id: "unlimited",
-        name: "Unlimited apps",
-        priceUsdMonthly: 19,
-        appLimit: null,
-        blurb: "Everything in One app, for every app on this deployment's App Store Connect team.",
-      },
-    ],
+    forSale: false,
+    plans: [],
   },
 ];
 

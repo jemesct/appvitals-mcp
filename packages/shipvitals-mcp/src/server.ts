@@ -110,44 +110,45 @@ export function createShipVitalsServer(ctx: ShipVitalsContext): McpServer {
     async (args) => toolGetTestFlightFeedback(ctx, args),
   );
 
-  server.registerTool(
-    "get_sales_summary",
-    {
-      description:
-        "Download a Sales and Trends SUMMARY report and total units and developer proceeds. The file is vendor-wide, not limited to appId. appId is only the entitlement check. Needs SHIPVITALS_VENDOR_NUMBER or vendorNumber. DAILY and WEEKLY dates are YYYY-MM-DD, MONTHLY is YYYY-MM, YEARLY is YYYY. A 404 means Apple has not published that date.",
-      inputSchema: {
-        appId,
-        reportDate: z.string().min(4).describe("DAILY/WEEKLY YYYY-MM-DD, MONTHLY YYYY-MM, YEARLY YYYY"),
-        frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]).optional(),
-        reportType: z.enum(["SALES", "PREORDER", "SUBSCRIPTION", "SUBSCRIPTION_EVENT", "SUBSCRIBER"]).optional(),
-        vendorNumber: z
-          .string()
-          .regex(/^\d{4,12}$/)
-          .optional()
-          .describe("Overrides SHIPVITALS_VENDOR_NUMBER"),
-        sku: z.string().min(1).max(200).optional().describe("Keep rows for this SKU only"),
+  if (ctx.salesReports !== false) {
+    server.registerTool(
+      "get_sales_summary",
+      {
+        description:
+          "Download a Sales and Trends SUMMARY report and total units and developer proceeds. The file is vendor-wide, not limited to appId. appId is only the allow-list check. The vendor number is SHIPVITALS_VENDOR_NUMBER. A caller-supplied vendorNumber is refused and is not sent to Apple. DAILY and WEEKLY dates are YYYY-MM-DD, MONTHLY is YYYY-MM, YEARLY is YYYY. A 404 means Apple has not published that date.",
+        inputSchema: {
+          appId,
+          reportDate: z.string().min(4).describe("DAILY/WEEKLY YYYY-MM-DD, MONTHLY YYYY-MM, YEARLY YYYY"),
+          frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]).optional(),
+          reportType: z.enum(["SALES", "PREORDER", "SUBSCRIPTION", "SUBSCRIPTION_EVENT", "SUBSCRIBER"]).optional(),
+          vendorNumber: z
+            .string()
+            .optional()
+            .describe("Refused. Set SHIPVITALS_VENDOR_NUMBER on the server. This value is never sent to Apple."),
+          sku: z.string().min(1).max(200).optional().describe("Keep rows for this SKU only"),
+        },
       },
-    },
-    async (args) => toolGetSalesSummary(ctx, args),
-  );
+      async (args) => toolGetSalesSummary(ctx, args),
+    );
 
-  server.registerTool(
-    "get_finance_summary",
-    {
-      description:
-        "Download one monthly finance report for an Apple financial region and total quantity and extended partner share. Vendor-wide, not per app. regionCode is US, AU, GB, JP, EU, and similar, not every storefront. A 404 means that month is not published. No payout date and no account balance.",
-      inputSchema: {
-        appId,
-        reportDate: z.string().regex(/^\d{4}-\d{2}$/).describe("YYYY-MM"),
-        regionCode: z.string().regex(/^[A-Za-z0-9]{2,3}$/),
-        vendorNumber: z
-          .string()
-          .regex(/^\d{4,12}$/)
-          .optional(),
+    server.registerTool(
+      "get_finance_summary",
+      {
+        description:
+          "Download one monthly finance report for an Apple financial region and total quantity and extended partner share. Vendor-wide, not per app. The vendor number is SHIPVITALS_VENDOR_NUMBER. A caller-supplied vendorNumber is refused and is not sent to Apple. regionCode is US, AU, GB, JP, EU, and similar, not every storefront. A 404 means that month is not published. No payout date and no account balance.",
+        inputSchema: {
+          appId,
+          reportDate: z.string().regex(/^\d{4}-\d{2}$/).describe("YYYY-MM"),
+          regionCode: z.string().regex(/^[A-Za-z0-9]{2,3}$/),
+          vendorNumber: z
+            .string()
+            .optional()
+            .describe("Refused. Set SHIPVITALS_VENDOR_NUMBER on the server. This value is never sent to Apple."),
+        },
       },
-    },
-    async (args) => toolGetFinanceSummary(ctx, args),
-  );
+      async (args) => toolGetFinanceSummary(ctx, args),
+    );
+  }
 
   server.registerTool(
     "get_perf_summary",
@@ -177,6 +178,8 @@ export function createAscClientFromEnv(env: NodeJS.ProcessEnv = process.env): As
 
 export function createServerFromEnv(env: NodeJS.ProcessEnv = process.env): McpServer {
   const config = loadConfig(env);
+  // The CLI uses this process's own App Store Connect key, so sales reports stay on.
+  // Hosted shared-key serving sets salesReports false. See hosted/lib/shipvitals-host.ts.
   return createShipVitalsServer({
     client: createAscClientFromEnv(env),
     appIds: config.appIds,

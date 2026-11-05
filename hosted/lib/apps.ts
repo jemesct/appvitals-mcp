@@ -35,6 +35,14 @@ export async function addCustomerApps(opts: {
   alertFrequency?: "daily" | "weekly";
   now: Date;
 }): Promise<{ ok: true; packages: string[] } | { ok: false; status: number; message: string }> {
+  if (opts.productId === "shipvitals") {
+    return {
+      ok: false,
+      status: 403,
+      message:
+        "Hosted ShipVitals does not accept Apple app ids. Self-host the open source MCP with your own App Store Connect key.",
+    };
+  }
   const auth = await authenticateApiKey(opts.repo, opts.token, opts.productId, opts.now);
   if (!auth.ok) return { ok: false, status: auth.status, message: auth.message };
   if (opts.packageNames.length === 0) {

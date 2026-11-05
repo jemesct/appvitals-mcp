@@ -8,9 +8,9 @@ export default function PrivacyPage() {
     <main>
       <h1>Privacy</h1>
       <p className="lede">
-        hostedmcp.dev is run by builtby_James. This covers the hosted site and the hosted MCP
-        products on it, including AppVitals and ShipVitals. A later MCP on the hub uses the same
-        account. The open source MCP you run on your own machine does not send data here.
+        hostedmcp.dev is run by builtby_James. This covers the hosted site and hosted AppVitals.
+        ShipVitals is the open source App Store Connect MCP. It is not a hosted multi-tenant
+        product, and a copy you run yourself does not send data here.
       </p>
       <p className="muted">Last updated 5 November 2026.</p>
 
@@ -46,17 +46,17 @@ export default function PrivacyPage() {
 
       <h2>App Store Connect</h2>
       <p>
-        Hosted ShipVitals does not ask you to upload an App Store Connect private key. One .p8, key
-        id, and issuer id are configured on the server for that deployment&apos;s Apple team. We
-        store the numeric app ids you register. We do not keep a database of App Store review text.
-        A reply you send goes to Apple.
+        We do not offer a public hosted ShipVitals, and we do not hold a shared App Store Connect
+        key for customers. We do not ask you to upload a <code>.p8</code>, and we do not store Apple
+        app ids for you. Self-host the open source MCP if you want App Store Connect in an agent.
+        That key stays on your machine.
       </p>
 
       <h2>Usage</h2>
       <p>
-        On the hosted AppVitals MCP we log each tool call: the time, the tool name, the 8 character
-        key prefix, the customer id, whether it succeeded, and the latency. We do not log the
-        arguments, the review text, or the full API key.
+        On a hosted MCP call we log the time, the tool name, the 8 character key prefix, the
+        customer id, whether it succeeded, and the latency. Today that is the AppVitals route. We
+        do not log the arguments, the review text, or the full API key.
       </p>
 
       <h2>Email delivery</h2>
@@ -74,7 +74,7 @@ export default function PrivacyPage() {
 
       <h2>Deletion</h2>
       <p>
-        Email <a href="mailto:james@turner.ooo">james@turner.ooo</a> and ask. We will delete your
+        Email <a href="mailto:support@hostedmcp.dev">support@hostedmcp.dev</a> and ask. We will delete your
         customer row, API key hashes, subscription record, app list, alert records, and usage rows.
         Review and vitals history is stored by package name. Say if you want that removed too, and
         we will delete it for the packages on your account.
@@ -86,7 +86,7 @@ export default function PrivacyPage() {
 
       <h2>Contact</h2>
       <p>
-        <a href="mailto:james@turner.ooo">james@turner.ooo</a>
+        <a href="mailto:support@hostedmcp.dev">support@hostedmcp.dev</a>
       </p>
     </main>
   );

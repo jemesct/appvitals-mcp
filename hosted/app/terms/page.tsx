@@ -22,16 +22,15 @@ export default function TermsPage() {
         here, and these terms do not apply to it.
       </p>
       <p>
-        The hosted plans are the paid service: a URL, an API key, and the extras on the product
-        page. For AppVitals that includes review history and alert email. AppVitals and ShipVitals
-        are separate subscriptions. A bundle of the two is not included.
+        The hosted plan is AppVitals: a URL, an API key, review history, and alert email. ShipVitals
+        is not a hosted subscription. We do not sell access to an App Store Connect key. You run
+        that MCP yourself. A bundle of the two is not included.
       </p>
 
       <h2>Accounts and API keys</h2>
       <p>
         There is no password. Lemon Squeezy collects the email at checkout, and that email is the
-        account. We email one API key. The key signs your MCP client in to each hosted product you
-        have subscribed to.
+        account. We email one API key. The key signs your MCP client in to hosted AppVitals.
       </p>
       <p>
         The key is a credential for the hosted service. It is not a sale of the software, and it is
@@ -78,7 +77,7 @@ export default function TermsPage() {
 
       <h2>Contact</h2>
       <p>
-        <a href="mailto:james@turner.ooo">james@turner.ooo</a>
+        <a href="mailto:support@hostedmcp.dev">support@hostedmcp.dev</a>
       </p>
     </main>
   );

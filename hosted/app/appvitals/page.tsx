@@ -72,8 +72,8 @@ export default function AppVitalsPage() {
         ))}
       </div>
       <p>
-        Your API key belongs to the hostedmcp.dev account, not just AppVitals. Later products use
-        the same key. Each product has its own subscription.
+        Your API key belongs to the hostedmcp.dev account. This checkout is AppVitals only.
+        ShipVitals is not included.
       </p>
       <p>
         After checkout we email you an API key. Then <Link href="/appvitals/connect">connect a Play app</Link>.

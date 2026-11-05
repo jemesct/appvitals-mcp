@@ -25,6 +25,7 @@ function ctx(partial: Partial<ShipVitalsContext> = {}): ShipVitalsContext {
     appIds: partial.appIds ?? ["1234567890"],
     allowWrites: partial.allowWrites ?? false,
     vendorNumber: partial.vendorNumber === undefined ? "80012345" : partial.vendorNumber,
+    ...(partial.salesReports !== undefined ? { salesReports: partial.salesReports } : {}),
   };
 }
 
@@ -132,6 +133,48 @@ describe("shipvitals tools", () => {
     expect(text(finance)).toContain("payout date");
   });
 
+  it("refuses a caller-supplied vendor number and disables sales on a shared key", async () => {
+    const client = new MockAscClient();
+    let appleCalls = 0;
+    const salesSummary = client.getSalesSummary.bind(client);
+    const financeSummary = client.getFinanceSummary.bind(client);
+    client.getSalesSummary = async (input) => {
+      appleCalls += 1;
+      return salesSummary(input);
+    };
+    client.getFinanceSummary = async (input) => {
+      appleCalls += 1;
+      return financeSummary(input);
+    };
+    const sales = await toolGetSalesSummary(ctx({ client }), {
+      appId: "1234567890",
+      reportDate: "2026-11-02",
+      vendorNumber: "80099999",
+    });
+    expect(sales.isError).toBe(true);
+    expect(text(sales)).toContain("cannot be set by the caller");
+    const finance = await toolGetFinanceSummary(ctx({ client, salesReports: false }), {
+      appId: "1234567890",
+      reportDate: "2026-10",
+      regionCode: "AU",
+    });
+    expect(finance.isError).toBe(true);
+    expect(text(finance)).toContain("disabled");
+    expect(appleCalls).toBe(0);
+
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const server = createShipVitalsServer(ctx({ salesReports: false, allowWrites: true }));
+    await server.connect(serverTransport);
+    const mcp = new Client({ name: "shipvitals-hosted", version: "0.0.0" });
+    await mcp.connect(clientTransport);
+    const names = (await mcp.listTools()).tools.map((tool) => tool.name);
+    expect(names).not.toContain("get_sales_summary");
+    expect(names).not.toContain("get_finance_summary");
+    expect(names).toContain("list_reviews");
+    await mcp.close();
+    await server.close();
+  });
+
   it("lists analytics report requests and does not invent a crash rate", async () => {
     const result = await toolGetPerfSummary(ctx(), { appId: "1234567890" });
     const body = text(result);
@@ -212,6 +255,16 @@ describe("shipvitals tools", () => {
       expect(result.isError, `${name}: ${body}`).not.toBe(true);
       expect(body.length).toBeGreaterThan(0);
     }
+    const overridden = await client.callTool({
+      name: "get_sales_summary",
+      arguments: { appId: "1234567890", reportDate: "2026-11-02", vendorNumber: "80099999" },
+    });
+    const overriddenBody = Array.isArray(overridden.content)
+      ? overridden.content.map((item) => ("text" in item ? item.text : "")).join("\n")
+      : "";
+    expect(overridden.isError).toBe(true);
+    expect(overriddenBody).toContain("cannot be set by the caller");
+    expect(overriddenBody).not.toContain("80099999");
     await client.close();
     await server.close();
   });

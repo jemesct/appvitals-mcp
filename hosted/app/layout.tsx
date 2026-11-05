@@ -10,7 +10,7 @@ const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   title: "hostedmcp.dev",
-  description: "A small hub for niche MCP servers. AppVitals for Google Play, ShipVitals for App Store Connect.",
+  description: "A small hub for niche MCP servers. AppVitals for Google Play. ShipVitals is the open source App Store Connect MCP.",
   metadataBase: new URL("https://hostedmcp.dev"),
 };
 

@@ -15,7 +15,13 @@ export interface ShipVitalsContext {
   client: AscClient;
   appIds: string[];
   allowWrites: boolean;
+  /** From SHIPVITALS_VENDOR_NUMBER. Callers cannot override it. */
   vendorNumber: string | null;
+  /**
+   * False on any shared-key hosted path. Sales and finance files are vendor-wide,
+   * so they stay off unless this process is using the operator's own key (the CLI).
+   */
+  salesReports?: boolean;
 }
 
 const SALES_FREQUENCIES = ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"] as const;
@@ -24,7 +30,7 @@ const SALES_TYPES = ["SALES", "PREORDER", "SUBSCRIPTION", "SUBSCRIPTION_EVENT", 
 export function assertConfiguredApp(ctx: ShipVitalsContext, appId: string): ToolResult | null {
   if (!ctx.appIds.includes(appId)) {
     return fail(
-      `App ${appId} is not configured. Set SHIPVITALS_APP_IDS, or add the Apple app id on the hosted account.`,
+      `App ${appId} is not configured. Set SHIPVITALS_APP_IDS to the numeric Apple app ids this process may read.`,
     );
   }
   return null;
@@ -145,6 +151,30 @@ export async function toolGetTestFlightFeedback(
   }
 }
 
+function salesReportsDisabled(ctx: ShipVitalsContext): ToolResult | null {
+  if (ctx.salesReports === false) {
+    return fail(
+      "Sales and finance reports are disabled on this server. A shared App Store Connect key must not serve vendor files. Self-host shipvitals-mcp with your own key.",
+    );
+  }
+  return null;
+}
+
+function vendorFromEnv(ctx: ShipVitalsContext, supplied: string | undefined): ToolResult | string {
+  if (supplied != null) {
+    return fail(
+      "Refused. vendorNumber cannot be set by the caller. Set SHIPVITALS_VENDOR_NUMBER on the server. The supplied value was not sent to Apple.",
+    );
+  }
+  if (!ctx.vendorNumber) {
+    return fail("Set SHIPVITALS_VENDOR_NUMBER. Sales and finance reports are per vendor, and Apple will not guess it.");
+  }
+  if (!/^\d{4,12}$/.test(ctx.vendorNumber)) {
+    return fail("SHIPVITALS_VENDOR_NUMBER should be the numeric vendor id from Payments and Financial Reports.");
+  }
+  return ctx.vendorNumber;
+}
+
 export async function toolGetSalesSummary(
   ctx: ShipVitalsContext,
   args: {
@@ -156,6 +186,8 @@ export async function toolGetSalesSummary(
     sku?: string;
   },
 ): Promise<ToolResult> {
+  const disabled = salesReportsDisabled(ctx);
+  if (disabled) return disabled;
   const denied = assertConfiguredApp(ctx, args.appId);
   if (denied) return denied;
   const frequency = args.frequency ?? "DAILY";
@@ -168,15 +200,8 @@ export async function toolGetSalesSummary(
   }
   const dateError = salesDateError(frequency, args.reportDate);
   if (dateError) return fail(dateError);
-  const vendor = args.vendorNumber ?? ctx.vendorNumber;
-  if (!vendor) {
-    return fail(
-      "Set vendorNumber or SHIPVITALS_VENDOR_NUMBER. Sales reports are per vendor, and Apple will not guess it.",
-    );
-  }
-  if (!/^\d{4,12}$/.test(vendor)) {
-    return fail("vendorNumber should be the numeric vendor id from Payments and Financial Reports.");
-  }
+  const vendor = vendorFromEnv(ctx, args.vendorNumber);
+  if (typeof vendor !== "string") return vendor;
   try {
     const summary = await ctx.client.getSalesSummary({
       vendorNumber: vendor,
@@ -199,6 +224,8 @@ export async function toolGetFinanceSummary(
   ctx: ShipVitalsContext,
   args: { appId: string; reportDate: string; regionCode: string; vendorNumber?: string },
 ): Promise<ToolResult> {
+  const disabled = salesReportsDisabled(ctx);
+  if (disabled) return disabled;
   const denied = assertConfiguredApp(ctx, args.appId);
   if (denied) return denied;
   if (!/^\d{4}-\d{2}$/.test(args.reportDate)) {
@@ -207,13 +234,8 @@ export async function toolGetFinanceSummary(
   if (!/^[A-Za-z0-9]{2,3}$/.test(args.regionCode)) {
     return fail("regionCode must be an Apple financial region such as US, AU, GB, JP, or EU.");
   }
-  const vendor = args.vendorNumber ?? ctx.vendorNumber;
-  if (!vendor) {
-    return fail("Set vendorNumber or SHIPVITALS_VENDOR_NUMBER. Finance reports are per vendor.");
-  }
-  if (!/^\d{4,12}$/.test(vendor)) {
-    return fail("vendorNumber should be the numeric vendor id from Payments and Financial Reports.");
-  }
+  const vendor = vendorFromEnv(ctx, args.vendorNumber);
+  if (typeof vendor !== "string") return vendor;
   try {
     const summary = await ctx.client.getFinanceSummary({
       vendorNumber: vendor,

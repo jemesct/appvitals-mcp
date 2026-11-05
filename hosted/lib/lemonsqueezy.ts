@@ -147,6 +147,9 @@ export async function handleLemonEvent(opts: {
   if (!product) {
     return { ok: false, message: `Unknown product ${productId}.` };
   }
+  if (!product.forSale) {
+    return { ok: true, ignored: true };
+  }
   const plan = planFromLemon(opts.event, opts.env);
   if (!plan) return { ok: false, message: "Could not map this subscription to a solo or unlimited plan." };
   const status = mapLemonStatus(opts.event.data?.attributes?.status, name);
@@ -197,11 +200,20 @@ export async function handleCheckoutRequest(opts: {
   const url = new URL(opts.requestUrl);
   const plan = url.searchParams.get("plan") ?? "";
   const productId = url.searchParams.get("product") ?? "appvitals";
+  const product = getProduct(productId);
+  if (!product) {
+    return { status: 400, body: { error: `Unknown product ${productId}.` } };
+  }
+  if (!product.forSale) {
+    return {
+      status: 403,
+      body: {
+        error: `${product.name} is not sold as a hosted plan. Self-host the open source MCP with your own credentials. There is no checkout.`,
+      },
+    };
+  }
   if (!isPlanId(plan)) {
     return { status: 400, body: { error: "plan must be solo or unlimited." } };
-  }
-  if (!getProduct(productId)) {
-    return { status: 400, body: { error: `Unknown product ${productId}.` } };
   }
   const missing = checkoutConfigError(opts.env, productId);
   if (missing) return { status: 503, body: { error: missing } };

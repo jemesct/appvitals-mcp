@@ -90,7 +90,9 @@ Self-hosting each MCP is free. Paid hosting is per product.
 
 [AppVitals](https://hostedmcp.dev/appvitals) adds review history past seven days, daily or weekly alert emails, more than one app on the Unlimited plan, and you skip creating your own Google Cloud project.
 
-[ShipVitals](https://hostedmcp.dev/shipvitals) is a separate subscription for the App Store Connect team configured on that deployment. It does not share a Play and App Store bundle with AppVitals.
+[ShipVitals](https://hostedmcp.dev/shipvitals) is the open source App Store Connect MCP. It is not a hosted subscription. Run it with your own API key. We do not sell access to a shared `.p8`, and there is no checkout.
+
+AppVitals hosted plans:
 
 - US$9 per month, one app
 - US$19 per month, unlimited apps

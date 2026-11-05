@@ -2,7 +2,7 @@
 
 Open source MCP server for App Store Connect reviews, TestFlight, version status, and sales reports. MIT, copyright builtby_James.
 
-It speaks stdio by default. `--http --port 3334` turns on Streamable HTTP. The hosted app on hostedmcp.dev imports these same tools and gates them with a hub API key.
+It speaks stdio by default. `--http --port 3334` turns on Streamable HTTP. hostedmcp.dev does not sell this as a hosted plan. Run it yourself.
 
 ## Why
 
@@ -40,7 +40,7 @@ SHIPVITALS_MOCK=1 SHIPVITALS_ALLOW_WRITES=true \
   node packages/shipvitals-mcp/dist/cli.js
 ```
 
-Mock mode returns fixture reviews, a Ready for Sale version, a TestFlight build, tester feedback, a sales total, a finance total, and an analytics-report catalogue. No Apple call is made. The default app id is `1234567890` and the fixture vendor number used by the tools still has to be passed or set (`SHIPVITALS_VENDOR_NUMBER=80012345`) because the tool contract matches live mode.
+Mock mode returns fixture reviews, a Ready for Sale version, a TestFlight build, tester feedback, a sales total, a finance total, and an analytics-report catalogue. No Apple call is made. The default app id is `1234567890`. Sales and finance still read `SHIPVITALS_VENDOR_NUMBER` (for example `80012345`). A `vendorNumber` argument on the tool is refused.
 
 HTTP:
 
@@ -109,7 +109,7 @@ Errors from Apple come back as tool errors. A 401 tells you to check the issuer,
 Be careful with the numbers. Several things people expect from Play Console are not in this API.
 
 - There is no lifetime App Store rating on the reviews endpoint. `list_reviews` can count the page it fetched. That is not the public rating.
-- Sales and finance data are gzip TSV files for the whole vendor number, not JSON for one app. `appId` on those tools is only the entitlement check. Pass `sku` on sales if you want one product. `DETAILED` sales files are not downloaded. Proceeds in more than one currency are not added together.
+- Sales and finance data are gzip TSV files for the whole vendor number, not JSON for one app. `appId` on those tools is only the allow-list check. The vendor number is `SHIPVITALS_VENDOR_NUMBER`. A caller-supplied `vendorNumber` is refused and is not sent to Apple. Pass `sku` on sales if you want one product. `DETAILED` sales files are not downloaded. Proceeds in more than one currency are not added together.
 - There is no MRR field, no payout date, and no account balance.
 - Daily sales reports often lag by a day or two. Finance reports are monthly, per Apple financial region (`US`, `AU`, `GB`, `JP`, `EU`, and others), and they show up after Apple processes the fiscal month.
 - There is no synchronous crash rate, hang rate, or launch-time query, and no bad-behaviour threshold like Play's 1.09% crash rate. Analytics Reports are asynchronous: someone creates a request, Apple generates a CSV, then you download it. `get_perf_summary` only lists requests that already exist. It does not create one, it does not download the CSV, and mock mode labels its catalogue as a fixture so it is not mistaken for a rate.
@@ -118,11 +118,13 @@ Be careful with the numbers. Several things people expect from Play Console are 
 - One API key is one team. App Store Connect has no equivalent of inviting a Play service account into someone else's developer account.
 - Metadata edits, screenshot uploads, review submission, price changes, and in-app purchase edits are not tools here. The only write is `reply_to_review`, and it is off unless you opt in.
 
-## Hosted
+## Not a hosted multi-tenant product
 
-Self-hosting the MCP is free. Paid hosting at [hostedmcp.dev/shipvitals](https://hostedmcp.dev/shipvitals) is a separate subscription from AppVitals (US$9 for one app, US$19 for unlimited apps on that deployment, 7 day trial). A Play and App Store bundle is not a checkout option yet.
+Self-hosting is the product. [hostedmcp.dev/shipvitals](https://hostedmcp.dev/shipvitals) documents this package. There is no Lemon Squeezy checkout and no way to register an Apple app id against a key on that site.
 
-Hosted ShipVitals uses the API key configured on the server (`SHIPVITALS_ISSUER_ID`, `SHIPVITALS_KEY_ID`, `SHIPVITALS_PRIVATE_KEY`). It cannot see a different Apple team. Register numeric app ids after checkout. To use your own team, run this package yourself.
+A later change could store a per-customer encrypted `.p8`, so each account would use its own App Store Connect key. That is not implemented. Do not point strangers at one shared `.p8`.
+
+If an operator sets `SHIPVITALS_ALLOWED_APP_IDS`, the hosted route answers only for those ids, and only with a `shipvitals` subscription row that public checkout will not create. Sales and finance tools are not registered on that route. `SHIPVITALS_APP_IDS` does not open it. With neither mock mode nor an allowlist, the route refuses the call.
 
 ## Demo prompts
 

@@ -13,6 +13,7 @@ import { recordAuthenticatedToolCall, toolCallOk, toolNamesFromMcpBody } from ".
 import { handleCheckoutRequest, handleLemonEvent, signLemonBody, verifyLemonSignature } from "../lib/lemonsqueezy";
 import { MemoryRepository } from "../lib/memory-repo";
 import { cronAuthorised } from "../lib/runtime";
+import { resolveHostedShipVitals } from "../lib/shipvitals-host";
 import { snapshotPackage } from "../lib/snapshot";
 import { detectSpike } from "../lib/spike";
 import type { Subscription } from "../lib/repo";
@@ -266,7 +267,8 @@ describe("hosted", () => {
     const ship = (await import("../lib/products")).getProduct("shipvitals");
     expect(ship?.path).toBe("/shipvitals");
     expect(ship?.mcpPath).toBe("/api/mcp/shipvitals");
-    expect(ship?.plans.map((plan) => plan.priceUsdMonthly)).toEqual([9, 19]);
+    expect(ship?.forSale).toBe(false);
+    expect(ship?.plans).toEqual([]);
 
     const repo = new MemoryRepository();
     const customer = await repo.upsertCustomerByEmail("ios@example.com");
@@ -292,39 +294,17 @@ describe("hosted", () => {
       packageNames: ["1234567890"],
       now: new Date("2026-11-04T00:00:00.000Z"),
     });
-    expect(saved.ok).toBe(true);
-    const bundle = await addCustomerApps({
-      repo,
-      token: key.token,
-      productId: "shipvitals",
-      packageNames: ["com.example.ios"],
-      now: new Date("2026-11-04T00:00:00.000Z"),
-    });
-    expect(bundle.ok).toBe(false);
-    if (!bundle.ok) expect(bundle.message).toContain("Apple app id");
+    expect(saved.ok).toBe(false);
+    if (!saved.ok) {
+      expect(saved.status).toBe(403);
+      expect(saved.message).toContain("does not accept Apple app ids");
+    }
+    expect(await repo.listApps(customer.id, "shipvitals")).toEqual([]);
   });
 
-  it("checks out ShipVitals against its own Lemon Squeezy variants", async () => {
-    const missing = await handleCheckoutRequest({
-      requestUrl: "https://hostedmcp.dev/api/checkout?plan=solo&product=shipvitals",
-      env: {
-        ...process.env,
-        LEMONSQUEEZY_API_KEY: "key",
-        LEMONSQUEEZY_STORE_ID: "1",
-        LEMONSQUEEZY_VARIANT_SOLO: "111",
-        LEMONSQUEEZY_VARIANT_UNLIMITED: "222",
-        LEMONSQUEEZY_VARIANT_SHIPVITALS_SOLO: "",
-        LEMONSQUEEZY_VARIANT_SHIPVITALS_UNLIMITED: "",
-      },
-    });
-    expect(missing.status).toBe(503);
-    if ("body" in missing) {
-      expect(missing.body.error).toContain("LEMONSQUEEZY_VARIANT_SHIPVITALS_SOLO");
-      expect(missing.body.error).not.toContain("LEMONSQUEEZY_VARIANT_SOLO,");
-    }
-
-    let seen = "";
-    const ready = await handleCheckoutRequest({
+  it("refuses ShipVitals checkout even when Lemon Squeezy variants are set", async () => {
+    let called = false;
+    const refused = await handleCheckoutRequest({
       requestUrl: "https://hostedmcp.dev/api/checkout?plan=unlimited&product=shipvitals",
       env: {
         ...process.env,
@@ -333,19 +313,17 @@ describe("hosted", () => {
         LEMONSQUEEZY_VARIANT_SHIPVITALS_SOLO: "333",
         LEMONSQUEEZY_VARIANT_SHIPVITALS_UNLIMITED: "444",
       },
-      fetchImpl: async (_url, init) => {
-        seen = String(init?.body ?? "");
-        return new Response(JSON.stringify({ data: { attributes: { url: "https://checkout.example/ship" } } }), {
-          status: 200,
-        });
+      fetchImpl: async () => {
+        called = true;
+        return new Response("{}", { status: 200 });
       },
     });
-    expect(ready).toEqual({ status: 302, redirect: "https://checkout.example/ship" });
-    expect(seen).toContain('"id":"444"');
-    expect(seen).toContain("shipvitals");
+    expect(refused.status).toBe(403);
+    if ("body" in refused) expect(refused.body.error).toContain("not sold");
+    expect(called).toBe(false);
   });
 
-  it("issues the hub key email for a ShipVitals subscription", async () => {
+  it("ignores a ShipVitals Lemon Squeezy subscription instead of issuing a key", async () => {
     const repo = new MemoryRepository();
     const email = new MemoryEmailSender();
     const created = await handleLemonEvent({
@@ -358,20 +336,73 @@ describe("hosted", () => {
         LEMONSQUEEZY_VARIANT_SHIPVITALS_UNLIMITED: "444",
       },
       event: {
-        meta: { event_name: "subscription_created", custom_data: { product_id: "shipvitals" } },
+        meta: { event_name: "subscription_created", custom_data: { product_id: "shipvitals", plan: "solo" } },
         data: {
           id: "sub_ship",
           attributes: { status: "active", user_email: "ios@example.com", variant_id: 333 },
         },
       },
     });
-    expect(created.ok).toBe(true);
-    if (!created.ok) return;
-    expect(email.sent[0]?.text).toContain("https://hostedmcp.dev/api/mcp/shipvitals");
-    expect(email.sent[0]?.text).toContain("ShipVitals");
-    const subscription = await repo.findSubscriptionByLsId("sub_ship");
-    expect(subscription?.productId).toBe("shipvitals");
-    expect(subscription?.plan).toBe("solo");
+    expect(created).toEqual({ ok: true, ignored: true });
+    expect(email.sent).toEqual([]);
+    expect(await repo.findSubscriptionByLsId("sub_ship")).toBeNull();
+  });
+
+  it("keeps the hosted ShipVitals route on an env allowlist and off sales reports", () => {
+    const closed = resolveHostedShipVitals({
+      ...process.env,
+      SHIPVITALS_APP_IDS: "1234567890",
+      SHIPVITALS_ALLOWED_APP_IDS: "",
+      SHIPVITALS_MOCK: "",
+      SHIPVITALS_ALLOW_WRITES: "true",
+    });
+    expect(closed.open).toBe(false);
+
+    const allow = resolveHostedShipVitals({
+      ...process.env,
+      SHIPVITALS_APP_IDS: "9999999999",
+      SHIPVITALS_ALLOWED_APP_IDS: "1234567890, not-an-id, 1234567890",
+      SHIPVITALS_MOCK: "",
+      SHIPVITALS_ALLOW_WRITES: "true",
+      SHIPVITALS_VENDOR_NUMBER: "80012345",
+    });
+    expect(allow).toEqual({
+      open: true,
+      mock: false,
+      appIds: ["1234567890"],
+      salesReports: false,
+      allowWrites: false,
+    });
+
+    const mock = resolveHostedShipVitals({
+      ...process.env,
+      SHIPVITALS_MOCK: "1",
+      SHIPVITALS_ALLOWED_APP_IDS: "",
+      SHIPVITALS_APP_IDS: "",
+    });
+    expect(mock.open).toBe(true);
+    if (mock.open) expect(mock.appIds).toEqual(["1234567890"]);
+
+    const page = readFileSync(path.join(root, "hosted/app/shipvitals/page.tsx"), "utf8");
+    const connect = readFileSync(path.join(root, "hosted/app/shipvitals/connect/page.tsx"), "utf8");
+    const route = readFileSync(path.join(root, "hosted/app/api/mcp/shipvitals/route.ts"), "utf8");
+    expect(page).not.toContain("/api/checkout");
+    expect(page).not.toContain("Start trial");
+    expect(connect).not.toContain("SHIPVITALS_KEY_ID");
+    expect(connect).not.toContain("SHIPVITALS_ISSUER_ID");
+    expect(connect).not.toContain("saveApps");
+    expect(connect).not.toContain("apiKey");
+    expect(route).toContain("appIds: gate.appIds");
+    expect(route).not.toContain("packages: auth");
+    expect(route).toContain("recordAuthenticatedToolCall");
+    expect(route).toContain("salesReports: gate.salesReports");
+    const legal = [
+      readFileSync(path.join(root, "hosted/app/privacy/page.tsx"), "utf8"),
+      readFileSync(path.join(root, "hosted/app/terms/page.tsx"), "utf8"),
+    ].join("\n");
+    expect(legal).toContain("support@hostedmcp.dev");
+    expect(legal).not.toContain("james@turner.ooo");
+    expect(legal).not.toContain("deployment's Apple team");
   });
 
   it("records hosted tool calls as metadata and can query them", async () => {
