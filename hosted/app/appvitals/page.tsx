@@ -1,4 +1,4 @@
-import { WorksWithPlay } from "@/components/PlayMark";
+import { ProductTitle, WorksWithPlay } from "@/components/BrandMarks";
 import { Examples } from "@/components/Examples";
 import Link from "next/link";
 import { getProduct } from "@/lib/products";
@@ -14,7 +14,7 @@ export default function AppVitalsPage() {
   return (
     <main>
       <WorksWithPlay />
-      <h1>AppVitals</h1>
+      <ProductTitle brands={["googlePlay"]}>AppVitals</ProductTitle>
       <p className="lede">
         AppVitals is Google Play. It reads Play Console for Android apps: reviews, crash and ANR rates, and releases. It does not read iOS or App Store Connect. Play Console is about four clicks deep for every app, and the reviews API only keeps seven days.
       </p>

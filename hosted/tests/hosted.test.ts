@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -368,6 +368,26 @@ describe("hosted", () => {
     expect(legal).not.toContain("james@turner.ooo");
   });
 
+  it("shows official platform logos next to each product", () => {
+    const home = readFileSync(path.join(root, "hosted/app/page.tsx"), "utf8");
+    const marks = readFileSync(path.join(root, "hosted/components/BrandMarks.tsx"), "utf8");
+    expect(home).toContain("googlePlay");
+    expect(home).toContain("appStoreConnect");
+    expect(home).toContain("lemonSqueezy");
+    expect(home).toContain("paddle");
+    expect(marks).toContain("/brands/google-play.svg");
+    expect(marks).toContain("/brands/app-store.png");
+    expect(marks).toContain("/brands/app-store-connect.png");
+    expect(marks).toContain("/brands/lemon-squeezy.svg");
+    expect(marks).toContain("/brands/paddle.png");
+    expect(existsSync(path.join(root, "hosted/public/brands/google-play.svg"))).toBe(true);
+    expect(existsSync(path.join(root, "hosted/public/brands/app-store.png"))).toBe(true);
+    expect(existsSync(path.join(root, "hosted/public/brands/app-store-connect.png"))).toBe(true);
+    expect(existsSync(path.join(root, "hosted/public/brands/lemon-squeezy.svg"))).toBe(true);
+    expect(existsSync(path.join(root, "hosted/public/brands/paddle.png"))).toBe(true);
+    expect(existsSync(path.join(root, "hosted/components/PlayMark.tsx"))).toBe(false);
+  });
+
   it("records hosted tool calls as metadata and can query them", async () => {
     const repo = new MemoryRepository();
     const customer = await repo.upsertCustomerByEmail("usage@example.com");
@@ -484,6 +504,7 @@ describe("hosted", () => {
       "packages/shipvitals-mcp/README.md",
       "hosted/app/page.tsx",
       "hosted/app/layout.tsx",
+      "hosted/components/BrandMarks.tsx",
       "hosted/app/appvitals/page.tsx",
       "hosted/app/appvitals/connect/page.tsx",
       "hosted/app/shipvitals/page.tsx",

@@ -1,4 +1,4 @@
-import { WorksWithPlay } from "@/components/PlayMark";
+import { ProductTitle, WorksWithAppStore, WorksWithPlay, WorksWithStores } from "@/components/BrandMarks";
 import Link from "next/link";
 import { products } from "@/lib/products";
 
@@ -18,7 +18,9 @@ export default function HomePage() {
       {first ? (
         <section className="card">
           <WorksWithPlay />
-          <h2 style={{ marginTop: 0, display: "block", width: "fit-content" }}>{first.name}</h2>
+          <ProductTitle as="h2" brands={["googlePlay"]}>
+            {first.name}
+          </ProductTitle>
           <p>{first.summary}</p>
           <p className="muted">
             Google Play only. It reads Play Console reviews, crash and ANR rates, and releases.
@@ -32,7 +34,10 @@ export default function HomePage() {
         </section>
       ) : null}
       <section className="card">
-        <h2 style={{ marginTop: 0 }}>ShipVitals</h2>
+        <WorksWithAppStore />
+        <ProductTitle as="h2" brands={["appStore", "appStoreConnect"]}>
+          ShipVitals
+        </ProductTitle>
         <p>iOS only. App Store Connect reviews, TestFlight, and version status. Not Google Play.</p>
         <p className="muted">
           Hosted plans use the App Store Connect key you upload. It is encrypted, and it is not shared with other customers. You can also self-host the open MCP.
@@ -42,7 +47,10 @@ export default function HomePage() {
         </p>
       </section>
       <section className="card">
-        <h2 style={{ marginTop: 0 }}>MerchantOps</h2>
+        <WorksWithStores />
+        <ProductTitle as="h2" brands={["lemonSqueezy", "paddle"]}>
+          MerchantOps
+        </ProductTitle>
         <p>Lemon Squeezy and Paddle: MRR, subscriptions, churn, failed payments, refunds, licence keys, and discounts.</p>
         <p className="muted">
           Store ops, not App Store Connect and not Google Play. The open-source package is private for now. Self-host it with your own store keys. There is no hosted checkout yet.

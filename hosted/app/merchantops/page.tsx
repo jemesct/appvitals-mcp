@@ -1,3 +1,4 @@
+import { ProductTitle, WorksWithStores } from "@/components/BrandMarks";
 import Link from "next/link";
 
 export const metadata = {
@@ -8,7 +9,8 @@ export const metadata = {
 export default function MerchantOpsPage() {
   return (
     <main>
-      <h1>MerchantOps</h1>
+      <WorksWithStores />
+      <ProductTitle brands={["lemonSqueezy", "paddle"]}>MerchantOps</ProductTitle>
       <p className="lede">
         MerchantOps is for your Lemon Squeezy or Paddle store. It is not Google Play and it is not iOS or App Store Connect. Ask an agent for revenue, subscriptions, refunds, and keys instead of opening two dashboards.
       </p>
