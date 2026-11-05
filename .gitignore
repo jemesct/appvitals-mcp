@@ -1,0 +1,17 @@
+node_modules
+dist
+.next
+.env
+.env.local
+*.log
+coverage
+tsconfig.tsbuildinfo
+hosted/tsconfig.tsbuildinfo
+packages/mcp/tsconfig.tsbuildinfo
+.secrets/
+.vercel
+.env*
+
+BRIEF.md
+STATUS.md
+.env.local

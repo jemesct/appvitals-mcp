@@ -1,0 +1,278 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+import { MockPlayClient } from "appvitals-mcp";
+import { addCustomerApps } from "../lib/apps";
+import { runAlerts } from "../lib/alerts";
+import { authenticateApiKey, entitledPackages, subscriptionAllowsAccess } from "../lib/auth";
+import { schemaSql } from "../db/schema";
+import { MemoryEmailSender } from "../lib/email";
+import { generateApiKey, sha256 } from "../lib/keys";
+import { handleCheckoutRequest, handleLemonEvent, signLemonBody, verifyLemonSignature } from "../lib/lemonsqueezy";
+import { MemoryRepository } from "../lib/memory-repo";
+import { cronAuthorised } from "../lib/runtime";
+import { snapshotPackage } from "../lib/snapshot";
+import { detectSpike } from "../lib/spike";
+import type { Subscription } from "../lib/repo";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+
+function sub(partial: Partial<Subscription> = {}): Subscription {
+  return {
+    id: "sub-1",
+    customerId: "cust-1",
+    productId: "appvitals",
+    plan: "solo",
+    trialEndsAt: null,
+    lsSubscriptionId: "ls-1",
+    status: "active",
+    alertFrequency: "daily",
+    lastAlertAt: null,
+    createdAt: "2026-11-01T00:00:00.000Z",
+    ...partial,
+  };
+}
+
+describe("hosted", () => {
+  it("keeps schema.sql and the embedded schema in sync", () => {
+    const file = readFileSync(path.join(root, "hosted/db/schema.sql"), "utf8").trim();
+    expect(schemaSql.trim()).toBe(file);
+  });
+
+  it("verifies Lemon Squeezy signatures and rejects a bad one", () => {
+    const body = JSON.stringify({ meta: { event_name: "subscription_created" } });
+    const signature = signLemonBody(body, "secret");
+    expect(verifyLemonSignature(body, signature, "secret")).toBe(true);
+    expect(verifyLemonSignature(body, signature.toUpperCase(), "secret")).toBe(true);
+    expect(verifyLemonSignature(body, "deadbeef", "secret")).toBe(false);
+    expect(verifyLemonSignature(body, null, "secret")).toBe(false);
+  });
+
+  it("issues one hub API key on subscription_created and updates status later", async () => {
+    const repo = new MemoryRepository();
+    const email = new MemoryEmailSender();
+    const now = new Date("2026-11-04T00:00:00.000Z");
+    const created = await handleLemonEvent({
+      repo,
+      email,
+      now,
+      env: { ...process.env, LEMONSQUEEZY_VARIANT_SOLO: "111", LEMONSQUEEZY_VARIANT_UNLIMITED: "222" },
+      event: {
+        meta: { event_name: "subscription_created", custom_data: { product_id: "appvitals", plan: "solo" } },
+        data: {
+          id: "sub_1",
+          attributes: { status: "on_trial", user_email: "Dev@Example.com", trial_ends_at: "2026-11-11T00:00:00.000Z" },
+        },
+      },
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    expect(created.apiKey?.startsWith("av_")).toBe(true);
+    expect(email.sent).toHaveLength(1);
+    expect(email.sent[0]?.text).toContain(created.apiKey);
+    const stored = await repo.findApiKeyByHash(sha256(created.apiKey ?? ""));
+    expect(stored?.customer.email).toBe("dev@example.com");
+    expect(JSON.stringify(repo.apiKeys)).not.toContain(created.apiKey);
+
+    const again = await handleLemonEvent({
+      repo,
+      email,
+      now,
+      env: process.env,
+      event: {
+        meta: { event_name: "subscription_updated", custom_data: { plan: "unlimited", product_id: "appvitals" } },
+        data: { id: "sub_1", attributes: { status: "active", user_email: "dev@example.com" } },
+      },
+    });
+    expect(again.ok).toBe(true);
+    if (again.ok) expect(again.apiKey).toBeUndefined();
+    expect(email.sent).toHaveLength(1);
+    const subscription = await repo.findSubscriptionByLsId("sub_1");
+    expect(subscription?.plan).toBe("unlimited");
+    expect(subscription?.status).toBe("active");
+
+    await handleLemonEvent({
+      repo,
+      email,
+      now,
+      env: process.env,
+      event: {
+        meta: { event_name: "subscription_cancelled", custom_data: { plan: "unlimited" } },
+        data: { id: "sub_1", attributes: { user_email: "dev@example.com", status: "cancelled" } },
+      },
+    });
+    expect((await repo.findSubscriptionByLsId("sub_1"))?.status).toBe("cancelled");
+  });
+
+  it("authenticates API keys and enforces trial expiry and the solo app limit", async () => {
+    const repo = new MemoryRepository();
+    const customer = await repo.upsertCustomerByEmail("a@b.c");
+    const key = generateApiKey();
+    await repo.insertApiKey({ customerId: customer.id, keyHash: key.keyHash, keyPrefix: key.keyPrefix });
+    await repo.upsertSubscription({
+      customerId: customer.id,
+      productId: "appvitals",
+      plan: "solo",
+      status: "trialing",
+      trialEndsAt: "2026-11-01T00:00:00.000Z",
+      lsSubscriptionId: "ls",
+    });
+    const expired = await authenticateApiKey(repo, key.token, "appvitals", new Date("2026-11-04T00:00:00.000Z"));
+    expect(expired.ok).toBe(false);
+    if (!expired.ok) expect(expired.message).toContain("trial");
+
+    const subscription = await repo.findSubscription(customer.id, "appvitals");
+    if (!subscription) throw new Error("missing subscription");
+    subscription.status = "active";
+    subscription.trialEndsAt = null;
+    const unknown = await authenticateApiKey(repo, "av_nope", "appvitals", new Date());
+    expect(unknown.ok).toBe(false);
+
+    const apps = [
+      await repo.addApp({ customerId: customer.id, productId: "appvitals", packageName: "com.first" }),
+      await repo.addApp({ customerId: customer.id, productId: "appvitals", packageName: "com.second" }),
+    ];
+    expect(entitledPackages(apps, "appvitals", "solo")).toEqual(["com.first"]);
+
+    const allowed = await authenticateApiKey(repo, key.token, "appvitals", new Date("2026-11-04T00:00:00.000Z"));
+    expect(allowed.ok).toBe(true);
+    if (allowed.ok) expect(allowed.entitlement.packages).toEqual(["com.first"]);
+
+    const second = await addCustomerApps({
+      repo,
+      token: key.token,
+      productId: "appvitals",
+      packageNames: ["com.third"],
+      now: new Date("2026-11-04T00:00:00.000Z"),
+    });
+    expect(second.ok).toBe(false);
+    if (!second.ok) expect(second.status).toBe(403);
+
+    expect(subscriptionAllowsAccess(sub({ status: "cancelled" }), new Date()).ok).toBe(false);
+  });
+
+  it("detects threshold breaches and 50% baseline spikes", () => {
+    expect(detectSpike(0.02, [0.02], 0.0109).spike).toBe(true);
+    expect(detectSpike(0.006, [0.002, 0.002], 0.0109).reason).toContain("50%");
+    expect(detectSpike(0.006, [0.005, 0.005], 0.0109).spike).toBe(false);
+    expect(detectSpike(null, [0.1], 0.0109).spike).toBe(false);
+    expect(detectSpike(0.008, [0.001], 0.0047).spike).toBe(true);
+  });
+
+  it("dedupes review snapshots", async () => {
+    const repo = new MemoryRepository();
+    const client = new MockPlayClient();
+    const now = new Date("2026-11-04T00:00:00.000Z");
+    const first = await snapshotPackage(repo, client, "com.example.app", now);
+    const second = await snapshotPackage(repo, client, "com.example.app", now);
+    expect(first.insertedReviews).toBe(2);
+    expect(second.insertedReviews).toBe(0);
+    expect(await repo.countReviews("com.example.app")).toBe(2);
+    const rows = await repo.listReviewSnapshots({ packageName: "com.example.app" });
+    expect(rows).toHaveLength(2);
+    expect(await repo.listVitals("com.example.app", "2026-01-01")).toHaveLength(1);
+  });
+
+  it("emails new 1-2 star reviews and vitals spikes, and respects weekly cadence", async () => {
+    const repo = new MemoryRepository();
+    const email = new MemoryEmailSender();
+    const customer = await repo.upsertCustomerByEmail("alerts@example.com");
+    const subscription = await repo.upsertSubscription({
+      customerId: customer.id,
+      productId: "appvitals",
+      plan: "unlimited",
+      status: "active",
+      trialEndsAt: null,
+      lsSubscriptionId: null,
+      alertFrequency: "daily",
+    });
+    await repo.addApp({ customerId: customer.id, productId: "appvitals", packageName: "com.example.app" });
+    await repo.upsertReview({
+      packageName: "com.example.app",
+      reviewId: "rev-low",
+      stars: 1,
+      text: "Broken",
+      author: "Pat",
+      lastModified: "2026-11-03T00:00:00.000Z",
+      capturedAt: "2026-11-03T00:00:00.000Z",
+    });
+    await repo.upsertReview({
+      packageName: "com.example.app",
+      reviewId: "rev-high",
+      stars: 5,
+      text: "Nice",
+      author: "Sam",
+      lastModified: "2026-11-03T00:00:00.000Z",
+      capturedAt: "2026-11-03T00:00:00.000Z",
+    });
+    await repo.upsertVitals({
+      packageName: "com.example.app",
+      date: "2026-10-01",
+      crashRate: 0.002,
+      userPerceivedCrashRate: 0.002,
+      anrRate: 0.001,
+      userPerceivedAnrRate: 0.001,
+      distinctUsers: 100,
+      slowStartRate: null,
+      excessiveWakeupRate: null,
+      capturedAt: "2026-10-01T00:00:00.000Z",
+    });
+    await repo.upsertVitals({
+      packageName: "com.example.app",
+      date: "2026-11-03",
+      crashRate: 0.02,
+      userPerceivedCrashRate: 0.02,
+      anrRate: 0.001,
+      userPerceivedAnrRate: 0.001,
+      distinctUsers: 100,
+      slowStartRate: null,
+      excessiveWakeupRate: null,
+      capturedAt: "2026-11-03T00:00:00.000Z",
+    });
+    const now = new Date("2026-11-04T00:00:00.000Z");
+    const first = await runAlerts({ repo, email, now, productId: "appvitals" });
+    expect(first.sent).toBe(1);
+    expect(email.sent[0]?.text).toContain("Broken");
+    expect(email.sent[0]?.text).not.toContain("Nice");
+    expect(email.sent[0]?.text).toContain("bad-behaviour");
+    const second = await runAlerts({ repo, email, now: new Date(now.getTime() + 60_000), productId: "appvitals" });
+    expect(second.sent).toBe(0);
+
+    subscription.alertFrequency = "weekly";
+    subscription.lastAlertAt = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
+    const weekly = await runAlerts({ repo, email, now, productId: "appvitals" });
+    expect(weekly.considered).toBe(0);
+  });
+
+  it("returns 503 from checkout when Lemon Squeezy is unset", async () => {
+    const result = await handleCheckoutRequest({
+      requestUrl: "https://hostedmcp.dev/api/checkout?plan=solo&product=appvitals",
+      env: process.env,
+    });
+    expect(result.status).toBe(503);
+    if ("body" in result) expect(result.body.error).toContain("LEMONSQUEEZY_API_KEY");
+  });
+
+  it("checks the cron bearer with a constant-time compare", () => {
+    expect(cronAuthorised("Bearer secret", "secret")).toBe(true);
+    expect(cronAuthorised("Bearer other", "secret")).toBe(false);
+    expect(cronAuthorised(null, "secret")).toBe(false);
+    expect(cronAuthorised("Bearer secret", undefined)).toBe(false);
+  });
+
+  it("keeps user-facing copy free of em dashes", () => {
+    const files = [
+      "README.md",
+      "packages/mcp/README.md",
+      "hosted/app/page.tsx",
+      "hosted/app/layout.tsx",
+      "hosted/app/appvitals/page.tsx",
+      "hosted/app/appvitals/connect/page.tsx",
+      "hosted/app/account/page.tsx",
+    ];
+    for (const file of files) {
+      expect(readFileSync(path.join(root, file), "utf8"), file).not.toContain("\u2014");
+    }
+  });
+});

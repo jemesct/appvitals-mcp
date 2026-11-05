@@ -1,0 +1,12 @@
+{
+  "rows": [
+    {
+      "startTime": { "year": 2026, "month": 11, "day": 1 },
+      "metrics": [
+        { "metric": "userPerceivedCrashRate", "decimalValue": { "value": "0.02" } },
+        { "metric": "crashRate", "decimalValue": { "value": "0.015" } },
+        { "metric": "distinctUsers", "decimalValue": { "value": "800" } }
+      ]
+    }
+  ]
+}

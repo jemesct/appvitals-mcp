@@ -1,0 +1,20 @@
+{
+  "reviews": [
+    {
+      "reviewId": "gp-1",
+      "authorName": "Pat",
+      "comments": [
+        {
+          "userComment": {
+            "text": "Too many ads",
+            "originalText": "Too many ads",
+            "starRating": 1,
+            "reviewerLanguage": "en",
+            "lastModified": { "seconds": "1761955200" }
+          }
+        }
+      ]
+    }
+  ],
+  "tokenPagination": { "nextPageToken": "page-2" }
+}

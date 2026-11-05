@@ -1,0 +1,21 @@
+{
+  "name": "appvitals",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "workspaces": [
+    "packages/*",
+    "hosted"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p packages/mcp/tsconfig.json --emitDeclarationOnly && tsc -p packages/mcp/tsconfig.test.json --noEmit && tsc -p hosted --noEmit && tsc -p e2e --noEmit",
+    "build": "npm run build -w appvitals-mcp && npm run build -w hostedmcp",
+    "test": "vitest run",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

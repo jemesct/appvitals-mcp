@@ -1,0 +1,76 @@
+-- hostedmcp.dev schema. Accounts and API keys are hub-wide.
+-- Subscriptions and entitlements are per product.
+
+CREATE TABLE IF NOT EXISTS customers (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS api_keys (
+  id TEXT PRIMARY KEY,
+  key_hash TEXT NOT NULL UNIQUE,
+  key_prefix TEXT NOT NULL,
+  customer_id TEXT NOT NULL REFERENCES customers(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL REFERENCES customers(id),
+  product_id TEXT NOT NULL,
+  plan TEXT NOT NULL,
+  trial_ends_at TIMESTAMPTZ,
+  ls_subscription_id TEXT UNIQUE,
+  status TEXT NOT NULL,
+  alert_frequency TEXT NOT NULL DEFAULT 'daily',
+  last_alert_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (customer_id, product_id)
+);
+
+CREATE TABLE IF NOT EXISTS apps (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL REFERENCES customers(id),
+  product_id TEXT NOT NULL,
+  package_name TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (customer_id, product_id, package_name)
+);
+
+CREATE TABLE IF NOT EXISTS review_snapshots (
+  id TEXT PRIMARY KEY,
+  package_name TEXT NOT NULL,
+  review_id TEXT NOT NULL,
+  stars INTEGER NOT NULL,
+  text TEXT,
+  author TEXT,
+  last_modified TIMESTAMPTZ,
+  captured_at TIMESTAMPTZ NOT NULL,
+  UNIQUE (package_name, review_id)
+);
+
+CREATE TABLE IF NOT EXISTS vitals_snapshots (
+  id TEXT PRIMARY KEY,
+  package_name TEXT NOT NULL,
+  date DATE NOT NULL,
+  crash_rate DOUBLE PRECISION,
+  user_perceived_crash_rate DOUBLE PRECISION,
+  anr_rate DOUBLE PRECISION,
+  user_perceived_anr_rate DOUBLE PRECISION,
+  distinct_users INTEGER,
+  slow_start_rate DOUBLE PRECISION,
+  excessive_wakeup_rate DOUBLE PRECISION,
+  captured_at TIMESTAMPTZ NOT NULL,
+  UNIQUE (package_name, date)
+);
+
+CREATE TABLE IF NOT EXISTS alerts_sent (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL REFERENCES customers(id),
+  product_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  subject_key TEXT NOT NULL,
+  sent_at TIMESTAMPTZ NOT NULL,
+  UNIQUE (customer_id, product_id, kind, subject_key)
+);

@@ -1,0 +1,15 @@
+{
+  "tracks": [
+    {
+      "track": "production",
+      "releases": [
+        {
+          "name": "1.2.0",
+          "status": "inProgress",
+          "versionCodes": ["41", "42"],
+          "userFraction": 0.2
+        }
+      ]
+    }
+  ]
+}
