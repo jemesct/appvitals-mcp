@@ -477,6 +477,12 @@ describe("hosted", () => {
     );
   });
 
+  it("links privacy and terms from the footer", () => {
+    const layout = readFileSync(path.join(root, "hosted/app/layout.tsx"), "utf8");
+    expect(layout).toContain('href="/privacy"');
+    expect(layout).toContain('href="/terms"');
+  });
+
   it("keeps user-facing copy free of em dashes", () => {
     const files = [
       "README.md",
@@ -490,6 +496,8 @@ describe("hosted", () => {
       "hosted/app/shipvitals/connect/page.tsx",
       "hosted/components/ShipExamples.tsx",
       "hosted/app/account/page.tsx",
+      "hosted/app/privacy/page.tsx",
+      "hosted/app/terms/page.tsx",
       "hosted/README.md",
     ];
     for (const file of files) {

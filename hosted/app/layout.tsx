@@ -38,6 +38,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               made by builtby_James
             </span>
             <span>The MCP is <a href="https://github.com/jemesct/appvitals-mcp">open source (MIT)</a></span>
+            <span>
+              <Link href="/privacy">Privacy</Link>
+              {" · "}
+              <Link href="/terms">Terms</Link>
+            </span>
             <span className="legal">
               Google Play and Google Play Console are trademarks of Google LLC. AppVitals is not affiliated with Google.
               App Store, App Store Connect, and TestFlight are trademarks of Apple Inc. ShipVitals is not affiliated with Apple.
