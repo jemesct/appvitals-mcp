@@ -41,7 +41,7 @@ export default function HomePage() {
           Hosted plans use the App Store Connect key you upload. It is encrypted, and it is not shared with other customers. You can also self-host the open MCP.
         </p>
         <p>
-          <Link href="/shipvitals">See ShipVitals</Link>
+          <Link className="button" href="/shipvitals">See ShipVitals</Link>
         </p>
       </section>
       <section className="card">
@@ -53,7 +53,7 @@ export default function HomePage() {
           Store ops, not App Store Connect and not Google Play. The open-source package is private for now. Self-host it with your own store keys. There is no hosted checkout yet.
         </p>
         <p>
-          <Link href="/merchantops">See MerchantOps</Link>
+          <Link className="button" href="/merchantops">See MerchantOps</Link>
         </p>
       </section>
     </main>
