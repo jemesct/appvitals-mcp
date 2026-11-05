@@ -69,6 +69,27 @@ export interface AlertSent {
   sentAt: string;
 }
 
+export interface ToolEvent {
+  id: string;
+  productId: string;
+  customerId: string;
+  keyPrefix: string;
+  toolName: string;
+  ok: boolean;
+  latencyMs: number | null;
+  createdAt: string;
+}
+
+export interface RecordToolEventInput {
+  productId: string;
+  customerId: string;
+  keyPrefix: string;
+  toolName: string;
+  ok: boolean;
+  latencyMs: number | null;
+  createdAt: string;
+}
+
 export interface UpsertSubscriptionInput {
   customerId: string;
   productId: string;
@@ -107,4 +128,6 @@ export interface Repository {
   upsertVitals(input: Omit<VitalsSnapshot, "id">): Promise<VitalsSnapshot>;
   listVitals(packageName: string, sinceDate: string): Promise<VitalsSnapshot[]>;
   recordAlert(input: Omit<AlertSent, "id">): Promise<{ inserted: boolean }>;
+  recordToolEvent(input: RecordToolEventInput): Promise<ToolEvent>;
+  listToolEvents(input?: { customerId?: string; productId?: string; limit?: number }): Promise<ToolEvent[]>;
 }

@@ -9,9 +9,11 @@ import { authenticateApiKey, entitledPackages, subscriptionAllowsAccess } from "
 import { schemaSql } from "../db/schema";
 import { MemoryEmailSender } from "../lib/email";
 import { generateApiKey, sha256 } from "../lib/keys";
+import { recordAuthenticatedToolCall, toolCallOk, toolNamesFromMcpBody } from "../lib/mcp-usage";
 import { handleCheckoutRequest, handleLemonEvent, signLemonBody, verifyLemonSignature } from "../lib/lemonsqueezy";
 import { MemoryRepository } from "../lib/memory-repo";
 import { cronAuthorised } from "../lib/runtime";
+import { resolveHostedShipVitals } from "../lib/shipvitals-host";
 import { snapshotPackage } from "../lib/snapshot";
 import { detectSpike } from "../lib/spike";
 import type { Subscription } from "../lib/repo";
@@ -261,15 +263,273 @@ describe("hosted", () => {
     expect(cronAuthorised("Bearer secret", undefined)).toBe(false);
   });
 
+  it("registers ShipVitals beside AppVitals and keeps their subscriptions apart", async () => {
+    const ship = (await import("../lib/products")).getProduct("shipvitals");
+    expect(ship?.path).toBe("/shipvitals");
+    expect(ship?.mcpPath).toBe("/api/mcp/shipvitals");
+    expect(ship?.forSale).toBe(false);
+    expect(ship?.plans).toEqual([]);
+
+    const repo = new MemoryRepository();
+    const customer = await repo.upsertCustomerByEmail("ios@example.com");
+    const key = generateApiKey();
+    await repo.insertApiKey({ customerId: customer.id, keyHash: key.keyHash, keyPrefix: key.keyPrefix });
+    await repo.upsertSubscription({
+      customerId: customer.id,
+      productId: "shipvitals",
+      plan: "solo",
+      status: "active",
+      trialEndsAt: null,
+      lsSubscriptionId: "ls-ship",
+    });
+    const shipAuth = await authenticateApiKey(repo, key.token, "shipvitals", new Date("2026-11-04T00:00:00.000Z"));
+    expect(shipAuth.ok).toBe(true);
+    const playAuth = await authenticateApiKey(repo, key.token, "appvitals", new Date("2026-11-04T00:00:00.000Z"));
+    expect(playAuth.ok).toBe(false);
+
+    const saved = await addCustomerApps({
+      repo,
+      token: key.token,
+      productId: "shipvitals",
+      packageNames: ["1234567890"],
+      now: new Date("2026-11-04T00:00:00.000Z"),
+    });
+    expect(saved.ok).toBe(false);
+    if (!saved.ok) {
+      expect(saved.status).toBe(403);
+      expect(saved.message).toContain("does not accept Apple app ids");
+    }
+    expect(await repo.listApps(customer.id, "shipvitals")).toEqual([]);
+  });
+
+  it("refuses ShipVitals checkout even when Lemon Squeezy variants are set", async () => {
+    let called = false;
+    const refused = await handleCheckoutRequest({
+      requestUrl: "https://hostedmcp.dev/api/checkout?plan=unlimited&product=shipvitals",
+      env: {
+        ...process.env,
+        LEMONSQUEEZY_API_KEY: "key",
+        LEMONSQUEEZY_STORE_ID: "9",
+        LEMONSQUEEZY_VARIANT_SHIPVITALS_SOLO: "333",
+        LEMONSQUEEZY_VARIANT_SHIPVITALS_UNLIMITED: "444",
+      },
+      fetchImpl: async () => {
+        called = true;
+        return new Response("{}", { status: 200 });
+      },
+    });
+    expect(refused.status).toBe(403);
+    if ("body" in refused) expect(refused.body.error).toContain("not sold");
+    expect(called).toBe(false);
+  });
+
+  it("ignores a ShipVitals Lemon Squeezy subscription instead of issuing a key", async () => {
+    const repo = new MemoryRepository();
+    const email = new MemoryEmailSender();
+    const created = await handleLemonEvent({
+      repo,
+      email,
+      now: new Date("2026-11-04T00:00:00.000Z"),
+      env: {
+        ...process.env,
+        LEMONSQUEEZY_VARIANT_SHIPVITALS_SOLO: "333",
+        LEMONSQUEEZY_VARIANT_SHIPVITALS_UNLIMITED: "444",
+      },
+      event: {
+        meta: { event_name: "subscription_created", custom_data: { product_id: "shipvitals", plan: "solo" } },
+        data: {
+          id: "sub_ship",
+          attributes: { status: "active", user_email: "ios@example.com", variant_id: 333 },
+        },
+      },
+    });
+    expect(created).toEqual({ ok: true, ignored: true });
+    expect(email.sent).toEqual([]);
+    expect(await repo.findSubscriptionByLsId("sub_ship")).toBeNull();
+  });
+
+  it("keeps the hosted ShipVitals route on an env allowlist and off sales reports", () => {
+    const closed = resolveHostedShipVitals({
+      ...process.env,
+      SHIPVITALS_APP_IDS: "1234567890",
+      SHIPVITALS_ALLOWED_APP_IDS: "",
+      SHIPVITALS_MOCK: "",
+      SHIPVITALS_ALLOW_WRITES: "true",
+    });
+    expect(closed.open).toBe(false);
+
+    const allow = resolveHostedShipVitals({
+      ...process.env,
+      SHIPVITALS_APP_IDS: "9999999999",
+      SHIPVITALS_ALLOWED_APP_IDS: "1234567890, not-an-id, 1234567890",
+      SHIPVITALS_MOCK: "",
+      SHIPVITALS_ALLOW_WRITES: "true",
+      SHIPVITALS_VENDOR_NUMBER: "80012345",
+    });
+    expect(allow).toEqual({
+      open: true,
+      mock: false,
+      appIds: ["1234567890"],
+      salesReports: false,
+      allowWrites: false,
+    });
+
+    const mock = resolveHostedShipVitals({
+      ...process.env,
+      SHIPVITALS_MOCK: "1",
+      SHIPVITALS_ALLOWED_APP_IDS: "",
+      SHIPVITALS_APP_IDS: "",
+    });
+    expect(mock.open).toBe(true);
+    if (mock.open) expect(mock.appIds).toEqual(["1234567890"]);
+
+    const page = readFileSync(path.join(root, "hosted/app/shipvitals/page.tsx"), "utf8");
+    const connect = readFileSync(path.join(root, "hosted/app/shipvitals/connect/page.tsx"), "utf8");
+    const route = readFileSync(path.join(root, "hosted/app/api/mcp/shipvitals/route.ts"), "utf8");
+    expect(page).not.toContain("/api/checkout");
+    expect(page).not.toContain("Start trial");
+    expect(connect).not.toContain("SHIPVITALS_KEY_ID");
+    expect(connect).not.toContain("SHIPVITALS_ISSUER_ID");
+    expect(connect).not.toContain("saveApps");
+    expect(connect).not.toContain("apiKey");
+    expect(route).toContain("appIds: gate.appIds");
+    expect(route).not.toContain("packages: auth");
+    expect(route).toContain("recordAuthenticatedToolCall");
+    expect(route).toContain("salesReports: gate.salesReports");
+    const legal = [
+      readFileSync(path.join(root, "hosted/app/privacy/page.tsx"), "utf8"),
+      readFileSync(path.join(root, "hosted/app/terms/page.tsx"), "utf8"),
+    ].join("\n");
+    expect(legal).toContain("support@hostedmcp.dev");
+    expect(legal).not.toContain("james@turner.ooo");
+    expect(legal).not.toContain("deployment's Apple team");
+  });
+
+  it("records hosted tool calls as metadata and can query them", async () => {
+    const repo = new MemoryRepository();
+    const customer = await repo.upsertCustomerByEmail("usage@example.com");
+    const key = generateApiKey();
+    const secretTail = key.token.slice(8);
+    const reviewText = "The app crashed and lost my streak of 140 days.";
+    const body = JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: {
+        name: "get_recent_reviews",
+        arguments: { packageName: "com.example.app", replyText: reviewText, apiKey: key.token },
+      },
+    });
+    expect(toolNamesFromMcpBody(body)).toEqual(["get_recent_reviews"]);
+    expect(toolNamesFromMcpBody(JSON.stringify({ jsonrpc: "2.0", method: "tools/list" }))).toEqual([]);
+
+    const started = Date.now() - 25;
+    await recordAuthenticatedToolCall({
+      repo,
+      productId: "appvitals",
+      customerId: customer.id,
+      keyPrefix: key.token,
+      body,
+      response: new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: { content: [{ type: "text", text: reviewText }], isError: false },
+        }),
+        { status: 200 },
+      ),
+      startedAt: started,
+      failed: false,
+    });
+    await recordAuthenticatedToolCall({
+      repo,
+      productId: "appvitals",
+      customerId: customer.id,
+      keyPrefix: key.keyPrefix,
+      body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "get_vitals" } }),
+      response: new Response(
+        JSON.stringify({ jsonrpc: "2.0", id: 2, result: { isError: true, content: [{ type: "text", text: "nope" }] } }),
+        { status: 200 },
+      ),
+      startedAt: Date.now(),
+      failed: false,
+    });
+    await repo.recordToolEvent({
+      productId: "shipvitals",
+      customerId: customer.id,
+      keyPrefix: key.keyPrefix,
+      toolName: "list_reviews",
+      ok: true,
+      latencyMs: 5,
+      createdAt: "2026-11-01T00:00:00.000Z",
+    });
+
+    const rows = await repo.listToolEvents({ customerId: customer.id, productId: "appvitals" });
+    expect(rows).toHaveLength(2);
+    const reviews = rows.find((row) => row.toolName === "get_recent_reviews");
+    const vitals = rows.find((row) => row.toolName === "get_vitals");
+    expect(reviews?.ok).toBe(true);
+    expect(vitals?.ok).toBe(false);
+    expect(reviews?.keyPrefix).toBe(key.keyPrefix);
+    expect(reviews?.keyPrefix).toHaveLength(8);
+    expect(reviews?.latencyMs).toBeGreaterThanOrEqual(20);
+    expect(rows.every((row) => row.customerId === customer.id)).toBe(true);
+
+    await repo.recordToolEvent({
+      productId: "order-check",
+      customerId: customer.id,
+      keyPrefix: "av_order1",
+      toolName: "older",
+      ok: true,
+      latencyMs: 1,
+      createdAt: "2026-11-03T00:00:00.000Z",
+    });
+    await repo.recordToolEvent({
+      productId: "order-check",
+      customerId: customer.id,
+      keyPrefix: "av_order1",
+      toolName: "newer",
+      ok: true,
+      latencyMs: 2,
+      createdAt: "2026-11-04T00:00:00.000Z",
+    });
+    const ordered = await repo.listToolEvents({ productId: "order-check" });
+    expect(ordered.map((row) => row.toolName)).toEqual(["newer", "older"]);
+    expect(ordered[0]?.keyPrefix).toBe("av_order");
+    expect((await repo.listToolEvents({ productId: "order-check", limit: 1 }))[0]?.toolName).toBe("newer");
+
+    const stored = JSON.stringify(repo.toolEvents);
+    expect(stored).not.toContain(secretTail);
+    expect(stored).not.toContain(reviewText);
+    expect(stored).not.toContain("com.example.app");
+    expect(await repo.listToolEvents({ productId: "shipvitals" })).toHaveLength(1);
+    expect(await toolCallOk(Response.json({ jsonrpc: "2.0", id: 1, error: { code: -32000, message: "nope" } }))).toBe(
+      false,
+    );
+  });
+
+  it("links privacy and terms from the footer", () => {
+    const layout = readFileSync(path.join(root, "hosted/app/layout.tsx"), "utf8");
+    expect(layout).toContain('href="/privacy"');
+    expect(layout).toContain('href="/terms"');
+  });
+
   it("keeps user-facing copy free of em dashes", () => {
     const files = [
       "README.md",
       "packages/mcp/README.md",
+      "packages/shipvitals-mcp/README.md",
       "hosted/app/page.tsx",
       "hosted/app/layout.tsx",
       "hosted/app/appvitals/page.tsx",
       "hosted/app/appvitals/connect/page.tsx",
+      "hosted/app/shipvitals/page.tsx",
+      "hosted/app/shipvitals/connect/page.tsx",
+      "hosted/components/ShipExamples.tsx",
       "hosted/app/account/page.tsx",
+      "hosted/app/privacy/page.tsx",
+      "hosted/app/terms/page.tsx",
+      "hosted/README.md",
     ];
     for (const file of files) {
       expect(readFileSync(path.join(root, file), "utf8"), file).not.toContain("\u2014");

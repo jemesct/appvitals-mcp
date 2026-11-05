@@ -11,8 +11,9 @@ export default function AccountPage() {
         you, and the API key in that email is how your tools sign in.
       </p>
       <p>
-        The key is hub-wide. AppVitals is one product on it. If another MCP shows up here later, you
-        use the same key, and you subscribe to that product on its own.
+        The key is for the hosted AppVitals service. ShipVitals is not a hosted subscription. Run
+        that MCP yourself with your own App Store Connect key. A bundle that covers both stores is
+        not a checkout option.
       </p>
       <p className="muted">
         We store a sha256 hash of the key, not the key itself. If you lose the email, subscribe

@@ -1,12 +1,15 @@
 import { randomUUID } from "node:crypto";
+import { safeKeyPrefix } from "./keys";
 import type {
   AlertSent,
   ApiKeyRecord,
   AppRecord,
   Customer,
+  RecordToolEventInput,
   Repository,
   ReviewSnapshot,
   Subscription,
+  ToolEvent,
   UpsertSubscriptionInput,
   VitalsSnapshot,
 } from "./repo";
@@ -23,6 +26,7 @@ export class MemoryRepository implements Repository {
   reviews: ReviewSnapshot[] = [];
   vitals: VitalsSnapshot[] = [];
   alerts: AlertSent[] = [];
+  toolEvents: ToolEvent[] = [];
 
   async getCustomer(customerId: string): Promise<Customer | null> {
     return this.customers.find((customer) => customer.id === customerId) ?? null;
@@ -231,4 +235,33 @@ export class MemoryRepository implements Repository {
     this.alerts.push({ id: id(), ...input });
     return { inserted: true };
   }
+
+  async recordToolEvent(input: RecordToolEventInput): Promise<ToolEvent> {
+    const row: ToolEvent = {
+      id: id(),
+      productId: input.productId,
+      customerId: input.customerId,
+      keyPrefix: safeKeyPrefix(input.keyPrefix),
+      toolName: input.toolName,
+      ok: input.ok,
+      latencyMs: input.latencyMs,
+      createdAt: input.createdAt,
+    };
+    this.toolEvents.push(row);
+    return row;
+  }
+
+  async listToolEvents(input: { customerId?: string; productId?: string; limit?: number } = {}): Promise<ToolEvent[]> {
+    const limit = clampLimit(input.limit);
+    return this.toolEvents
+      .filter((row) => (input.customerId ? row.customerId === input.customerId : true))
+      .filter((row) => (input.productId ? row.productId === input.productId : true))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
+      .slice(0, limit);
+  }
+}
+
+function clampLimit(limit: number | undefined): number {
+  if (limit == null || !Number.isFinite(limit)) return 100;
+  return Math.min(500, Math.max(1, Math.floor(limit)));
 }

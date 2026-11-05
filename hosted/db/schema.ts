@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   UNIQUE (customer_id, product_id)
 );
 
+-- package_name is the resource id for that product:
+-- an Android application id for AppVitals, or a numeric Apple app id for ShipVitals.
 CREATE TABLE IF NOT EXISTS apps (
   id TEXT PRIMARY KEY,
   customer_id TEXT NOT NULL REFERENCES customers(id),
@@ -74,4 +76,19 @@ CREATE TABLE IF NOT EXISTS alerts_sent (
   sent_at TIMESTAMPTZ NOT NULL,
   UNIQUE (customer_id, product_id, kind, subject_key)
 );
+
+-- Metadata for hosted MCP tools/call requests. No arguments, review text, or full API keys.
+CREATE TABLE IF NOT EXISTS mcp_usage (
+  id TEXT PRIMARY KEY,
+  product_id TEXT NOT NULL,
+  customer_id TEXT NOT NULL REFERENCES customers(id),
+  key_prefix TEXT NOT NULL,
+  tool_name TEXT NOT NULL,
+  ok BOOLEAN NOT NULL,
+  latency_ms INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS mcp_usage_product_created
+  ON mcp_usage (product_id, created_at DESC);
 `;

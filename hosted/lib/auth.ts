@@ -9,6 +9,8 @@ export interface Entitlement {
   plan: PlanId;
   status: Subscription["status"];
   packages: string[];
+  /** First 8 characters of the hub API key. Never the full key. */
+  keyPrefix: string;
   subscription: Subscription;
 }
 
@@ -79,6 +81,7 @@ export async function authenticateApiKey(
       plan: subscription.plan,
       status: subscription.status,
       packages: entitledPackages(apps, productId, subscription.plan),
+      keyPrefix: found.keyPrefix,
       subscription,
     },
   };

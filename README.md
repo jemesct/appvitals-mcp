@@ -6,7 +6,8 @@ Open core under MIT. The MCP that talks to Play is free to self-host. The [hoste
 
 ## Layout
 
-- `packages/mcp` (`appvitals-mcp`): the open source MCP server
+- `packages/mcp` (`appvitals-mcp`): the open source MCP server for Google Play
+- `packages/shipvitals-mcp`: the open source MCP server for App Store Connect
 - `hosted/`: the Next.js app that runs on [hostedmcp.dev](https://hostedmcp.dev)
 
 ## Scripts
@@ -74,9 +75,24 @@ APPVITALS_MOCK=1 APPVITALS_PACKAGES=com.example.app node packages/mcp/dist/cli.j
 }
 ```
 
+## ShipVitals
+
+Open-source MCP for App Store Connect reviews, TestFlight, version status, and sales reports. See `packages/shipvitals-mcp/README.md`. Mock mode:
+
+```bash
+npm run build -w shipvitals-mcp
+SHIPVITALS_MOCK=1 SHIPVITALS_VENDOR_NUMBER=80012345 node packages/shipvitals-mcp/dist/cli.js
+```
+
 ## Hosted
 
-Self-hosting the MCP is free. Paid hosting at [hostedmcp.dev/appvitals](https://hostedmcp.dev/appvitals) adds review history past seven days, daily or weekly alert emails, more than one app on the Unlimited plan, and you skip creating your own Google Cloud project.
+Self-hosting each MCP is free. Paid hosting is per product.
+
+[AppVitals](https://hostedmcp.dev/appvitals) adds review history past seven days, daily or weekly alert emails, more than one app on the Unlimited plan, and you skip creating your own Google Cloud project.
+
+[ShipVitals](https://hostedmcp.dev/shipvitals) is the open source App Store Connect MCP. It is not a hosted subscription. Run it with your own API key. We do not sell access to a shared `.p8`, and there is no checkout.
+
+AppVitals hosted plans:
 
 - US$9 per month, one app
 - US$19 per month, unlimited apps

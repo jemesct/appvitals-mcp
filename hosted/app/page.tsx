@@ -32,6 +32,16 @@ export default function HomePage() {
           </p>
         </section>
       ) : null}
+      <section className="card">
+        <h2 style={{ marginTop: 0 }}>ShipVitals</h2>
+        <p>App Store Connect reviews, TestFlight, and version status for iOS apps.</p>
+        <p className="muted">
+          Open source, and not a hosted plan. Run it with your own App Store Connect API key. We do not sell access to a shared key, and there is no checkout.
+        </p>
+        <p>
+          <Link href="/shipvitals">See ShipVitals</Link>
+        </p>
+      </section>
     </main>
   );
 }
