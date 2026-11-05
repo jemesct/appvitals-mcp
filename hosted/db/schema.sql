@@ -91,3 +91,14 @@ CREATE TABLE IF NOT EXISTS mcp_usage (
 
 CREATE INDEX IF NOT EXISTS mcp_usage_product_created
   ON mcp_usage (product_id, created_at DESC);
+
+-- Per-customer App Store Connect key. The .p8, key id, issuer id, and vendor number
+-- live in the ciphertext (AES-256-GCM). Nothing in this table is the plaintext key.
+CREATE TABLE IF NOT EXISTS asc_credentials (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL UNIQUE REFERENCES customers(id),
+  iv TEXT NOT NULL,
+  auth_tag TEXT NOT NULL,
+  ciphertext TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

@@ -1,34 +1,41 @@
-import { createAscClientFromEnv, createShipVitalsServer } from "shipvitals-mcp";
+import { createShipVitalsServer } from "shipvitals-mcp";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { getRepo } from "@/lib/runtime";
 import { authenticateRequest } from "@/lib/auth";
 import { forwardMcpRequest, recordAuthenticatedToolCall } from "@/lib/mcp-usage";
-import { resolveHostedShipVitals } from "@/lib/shipvitals-host";
+import { openHostedShipVitals } from "@/lib/shipvitals-host";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Per-customer encrypted .p8 is the follow-up that would make this multi-tenant.
-// Until then, app ids come only from resolveHostedShipVitals (env allowlist or mock).
-// Do not pass the customer's saved app list into the App Store Connect client.
+// Each paying customer uses the App Store Connect key they saved. The ciphertext
+// is decrypted for this request only. Do not log it, and do not fall back to
+// another customer's key or a shared deployment .p8.
 
 async function handle(req: Request): Promise<Response> {
-  const gate = resolveHostedShipVitals(process.env);
-  if (!gate.open) {
-    return Response.json({ error: gate.message }, { status: 403 });
-  }
   const repo = await getRepo();
   const auth = await authenticateRequest(repo, req.headers.get("authorization"), "shipvitals");
   if (!auth.ok) {
     return Response.json({ error: auth.message }, { status: auth.status });
   }
+  const record = await repo.getAscCredentials(auth.entitlement.customerId);
+  const opened = await openHostedShipVitals({
+    env: process.env,
+    customerId: auth.entitlement.customerId,
+    plan: auth.entitlement.plan,
+    registeredAppIds: auth.entitlement.packages,
+    record,
+  });
+  if (!opened.ok) {
+    return Response.json({ error: opened.message }, { status: opened.status });
+  }
   const body = req.method === "GET" || req.method === "HEAD" ? "" : await req.text();
   const server = createShipVitalsServer({
-    client: createAscClientFromEnv(process.env),
-    appIds: gate.appIds,
-    allowWrites: gate.allowWrites,
-    vendorNumber: null,
-    salesReports: gate.salesReports,
+    client: opened.session.client,
+    appIds: opened.session.appIds,
+    allowWrites: opened.session.allowWrites,
+    vendorNumber: opened.session.vendorNumber,
+    salesReports: opened.session.salesReports,
   });
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,

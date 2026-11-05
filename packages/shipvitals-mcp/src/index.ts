@@ -3,6 +3,7 @@ export { MISSING_CREDENTIALS, MockAscClient, UnavailableAscClient } from "./asc/
 export { parseReviews, summariseFinanceTsv, summariseSalesTsv } from "./asc/parse.js";
 export type {
   AppStatus,
+  AscApp,
   AscClient,
   CustomerReview,
   FinanceSummary,

@@ -77,7 +77,7 @@ APPVITALS_MOCK=1 APPVITALS_PACKAGES=com.example.app node packages/mcp/dist/cli.j
 
 ## ShipVitals
 
-Open-source MCP for App Store Connect reviews, TestFlight, version status, and sales reports. See `packages/shipvitals-mcp/README.md`. Mock mode:
+Open-source MCP for iOS. It reads App Store Connect (reviews, TestFlight, version status, and sales reports). It does not read Google Play. See `packages/shipvitals-mcp/README.md`. Mock mode:
 
 ```bash
 npm run build -w shipvitals-mcp
@@ -90,7 +90,9 @@ Self-hosting each MCP is free. Paid hosting is per product.
 
 [AppVitals](https://hostedmcp.dev/appvitals) adds review history past seven days, daily or weekly alert emails, more than one app on the Unlimited plan, and you skip creating your own Google Cloud project.
 
-[ShipVitals](https://hostedmcp.dev/shipvitals) is the open source App Store Connect MCP. It is not a hosted subscription. Run it with your own API key. We do not sell access to a shared `.p8`, and there is no checkout.
+[ShipVitals](https://hostedmcp.dev/shipvitals) is iOS, via App Store Connect. Hosted plans are Soft (US$9, one app) and Team (US$19). You upload your own `.p8`. It is encrypted with `SHIPVITALS_CREDENTIALS_KEY`. There is no shared Apple key.
+
+[MerchantOps](https://hostedmcp.dev/merchantops) is Lemon Squeezy and Paddle (MRR, subscriptions, refunds, keys). It is not an app store. The package is private for now and there is no hosted checkout.
 
 AppVitals hosted plans:
 

@@ -22,12 +22,20 @@ ORDER BY created_at DESC
 LIMIT 50;
 ```
 
-The same row shape is written for an authenticated call to `/api/mcp/shipvitals`. That route is not a public product. See below.
+The same row shape is written for an authenticated call to `/api/mcp/shipvitals`. Arguments, review text, and the `.p8` are not stored in that table.
 
-## ShipVitals
+## ShipVitals (iOS)
 
-ShipVitals is the open source package in `packages/shipvitals-mcp`. Checkout for `product=shipvitals` returns 403. The connect page does not save Apple app ids. Webhooks for that product are ignored, so a Lemon Squeezy event does not create a subscription.
+Hosted ShipVitals is App Store Connect, not Google Play. Checkout uses `LEMONSQUEEZY_VARIANT_SHIPVITALS_SOLO` (Soft, US$9) and `LEMONSQUEEZY_VARIANT_SHIPVITALS_UNLIMITED` (Team, US$19), plus the shared `LEMONSQUEEZY_API_KEY` and `LEMONSQUEEZY_STORE_ID`.
 
-`/api/mcp/shipvitals` stays closed unless `SHIPVITALS_MOCK` is on or `SHIPVITALS_ALLOWED_APP_IDS` lists numeric app ids. Those ids come from the environment. Apps saved on a customer account are not read. `SHIPVITALS_APP_IDS` does not open the route. Sales and finance tools are not registered, and review replies stay off. A hub API key still needs a `shipvitals` subscription row, which this app will not create from checkout.
+Each customer pastes their own Key ID, Issuer ID, and `.p8` on `/shipvitals/connect`. Optional vendor number turns on sales and finance for that customer only. A caller cannot pass a different vendor number.
 
-Follow-up, not built: a per-customer encrypted `.p8`, so each account would use its own App Store Connect key. Do not serve customers from the deployment key.
+`SHIPVITALS_CREDENTIALS_KEY` is required before a key can be saved. It must be 32 bytes: 64 hex characters, or base64 that decodes to 32 bytes. Generate one with `openssl rand -base64 32`. Do not commit it. The database stores AES-256-GCM ciphertext only. The connect response does not include the `.p8`.
+
+`/api/mcp/shipvitals` decrypts that customer's row and lists apps with their key. Registered app ids are kept only when that key can see them. Another customer's key is never used.
+
+`SHIPVITALS_MOCK=1` serves fixtures when the account has no saved key. `SHIPVITALS_OPERATOR_CUSTOMER_ID` with `SHIPVITALS_ALLOWED_APP_IDS` is a single-account fallback that still uses the deployment key from `SHIPVITALS_ISSUER_ID`, `SHIPVITALS_KEY_ID`, and `SHIPVITALS_PRIVATE_KEY`. Leave the operator id unset in production if every customer uploads a key. `SHIPVITALS_ALLOW_WRITES=true` allows review replies for customer keys. It stays off for the operator fallback.
+
+## MerchantOps
+
+`/merchantops` explains the Lemon Squeezy and Paddle MCP. There is no checkout and no credential form. The package lives in the private repo `jemesct/merchantops-mcp`.

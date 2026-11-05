@@ -3,7 +3,7 @@ import { addCustomerApps, parsePackageNames } from "@/lib/apps";
 import { getRepo } from "@/lib/runtime";
 
 export const metadata = {
-  title: "Connect AppVitals · hostedmcp.dev",
+  title: "Connect AppVitals · Google Play · hostedmcp.dev",
 };
 
 const PLACEHOLDER = "your-service-account@project.iam.gserviceaccount.com";
@@ -37,7 +37,7 @@ export default async function ConnectPage({
   const placeholder = email === PLACEHOLDER;
   return (
     <main>
-      <h1>Connect an app</h1>
+      <h1>Connect a Google Play app</h1>
       <p>
         AppVitals reads your Play data with one service account. You invite that account on the
         apps you care about. You do not hand us a Google Cloud key of your own.

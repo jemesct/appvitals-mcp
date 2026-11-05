@@ -2,7 +2,9 @@
 
 Open source MCP server for App Store Connect reviews, TestFlight, version status, and sales reports. MIT, copyright builtby_James.
 
-It speaks stdio by default. `--http --port 3334` turns on Streamable HTTP. hostedmcp.dev does not sell this as a hosted plan. Run it yourself.
+It speaks stdio by default. `--http --port 3334` turns on Streamable HTTP. This package is iOS and App Store Connect. It does not talk to Google Play.
+
+Hosted ShipVitals on hostedmcp.dev stores each customer's `.p8` encrypted, and calls Apple with that key only. Self-hosting still uses the environment variables below.
 
 ## Why
 
@@ -118,13 +120,11 @@ Be careful with the numbers. Several things people expect from Play Console are 
 - One API key is one team. App Store Connect has no equivalent of inviting a Play service account into someone else's developer account.
 - Metadata edits, screenshot uploads, review submission, price changes, and in-app purchase edits are not tools here. The only write is `reply_to_review`, and it is off unless you opt in.
 
-## Not a hosted multi-tenant product
+## Hosted
 
-Self-hosting is the product. [hostedmcp.dev/shipvitals](https://hostedmcp.dev/shipvitals) documents this package. There is no Lemon Squeezy checkout and no way to register an Apple app id against a key on that site.
+[hostedmcp.dev/shipvitals](https://hostedmcp.dev/shipvitals) sells Soft (US$9, one iOS app) and Team (US$19). Checkout is Lemon Squeezy. After that, the connect page takes your Key ID, Issuer ID, `.p8`, and an optional vendor number. The server encrypts them with `SHIPVITALS_CREDENTIALS_KEY` (32 bytes) and does not show the `.p8` again. The hosted MCP uses that customer's key. Sales and finance run only if that customer saved a vendor number.
 
-A later change could store a per-customer encrypted `.p8`, so each account would use its own App Store Connect key. That is not implemented. Do not point strangers at one shared `.p8`.
-
-If an operator sets `SHIPVITALS_ALLOWED_APP_IDS`, the hosted route answers only for those ids, and only with a `shipvitals` subscription row that public checkout will not create. Sales and finance tools are not registered on that route. `SHIPVITALS_APP_IDS` does not open it. With neither mock mode nor an allowlist, the route refuses the call.
+`SHIPVITALS_OPERATOR_CUSTOMER_ID` plus `SHIPVITALS_ALLOWED_APP_IDS` is an operator fallback for one account that has not uploaded a key. It is not used for other customers. `SHIPVITALS_MOCK=1` serves fixtures and no vendor reports.
 
 ## Demo prompts
 

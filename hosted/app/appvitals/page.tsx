@@ -4,8 +4,8 @@ import Link from "next/link";
 import { getProduct } from "@/lib/products";
 
 export const metadata = {
-  title: "AppVitals · hostedmcp.dev",
-  description: "Play reviews, vitals, and releases in your MCP client.",
+  title: "AppVitals · Google Play · hostedmcp.dev",
+  description: "Google Play reviews, vitals, and releases in your MCP client. Android and Play Console, not iOS.",
 };
 
 export default function AppVitalsPage() {
@@ -16,9 +16,7 @@ export default function AppVitalsPage() {
       <WorksWithPlay />
       <h1>AppVitals</h1>
       <p className="lede">
-        Play Console is about four clicks deep for every app, and the reviews API only keeps seven
-        days. AppVitals is an MCP server that pulls reviews, ratings, vitals, and releases into the
-        agent you already use.
+        AppVitals is Google Play. It reads Play Console for Android apps: reviews, crash and ANR rates, and releases. It does not read iOS or App Store Connect. Play Console is about four clicks deep for every app, and the reviews API only keeps seven days.
       </p>
       <h2>What it does</h2>
       <ul>

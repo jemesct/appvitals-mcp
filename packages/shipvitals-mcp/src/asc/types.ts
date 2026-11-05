@@ -113,7 +113,14 @@ export interface PerfSummary {
   fixture: { label: string } | null;
 }
 
+export interface AscApp {
+  id: string;
+  name: string | null;
+  bundleId: string | null;
+}
+
 export interface AscClient {
+  listApps(): Promise<AscApp[]>;
   listReviews(input: {
     appId: string;
     limit?: number;

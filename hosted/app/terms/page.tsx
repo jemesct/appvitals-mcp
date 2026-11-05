@@ -22,15 +22,16 @@ export default function TermsPage() {
         here, and these terms do not apply to it.
       </p>
       <p>
-        The hosted plan is AppVitals: a URL, an API key, review history, and alert email. ShipVitals
-        is not a hosted subscription. We do not sell access to an App Store Connect key. You run
-        that MCP yourself. A bundle of the two is not included.
+        Hosted AppVitals is Google Play: a URL, an API key, review history, and alert email. Hosted
+        ShipVitals is iOS, via your own App Store Connect key, which we encrypt. We do not sell a
+        shared Apple key. MerchantOps is not a hosted subscription. You self-host that MCP with
+        your Lemon Squeezy or Paddle key. A bundle of these products is not included.
       </p>
 
       <h2>Accounts and API keys</h2>
       <p>
         There is no password. Lemon Squeezy collects the email at checkout, and that email is the
-        account. We email one API key. The key signs your MCP client in to hosted AppVitals.
+        account. We email one API key. The key signs your MCP client in to each hosted product you have subscribed to: AppVitals for Google Play, ShipVitals for iOS.
       </p>
       <p>
         The key is a credential for the hosted service. It is not a sale of the software, and it is
