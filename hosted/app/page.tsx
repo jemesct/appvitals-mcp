@@ -41,7 +41,7 @@ export default function HomePage() {
           Hosted plans use the App Store Connect key you upload. It is encrypted, and it is not shared with other customers. You can also self-host the open MCP.
         </p>
         <p>
-          <Link href="/shipvitals">See ShipVitals</Link>
+          <Link className="button" href="/shipvitals">See ShipVitals</Link>
         </p>
       </section>
       <section className="card">
@@ -53,7 +53,7 @@ export default function HomePage() {
           Hosted plans use your own store keys, encrypted for your account. Solo covers one store. Team covers multiple stores on either or both providers. You can also self-host the MCP.
         </p>
         <p>
-          <Link href="/merchantops">See MerchantOps</Link>
+          <Link className="button" href="/merchantops">See MerchantOps</Link>
         </p>
       </section>
     </main>
