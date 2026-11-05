@@ -368,13 +368,20 @@ describe("hosted", () => {
     expect(legal).not.toContain("james@turner.ooo");
   });
 
-  it("shows official platform logos next to each product", () => {
+  it("shows official platform logos in a works-with pill on the same line as each product name", () => {
     const home = readFileSync(path.join(root, "hosted/app/page.tsx"), "utf8");
     const marks = readFileSync(path.join(root, "hosted/components/BrandMarks.tsx"), "utf8");
-    expect(home).toContain("googlePlay");
-    expect(home).toContain("appStoreConnect");
-    expect(home).toContain("lemonSqueezy");
-    expect(home).toContain("paddle");
+    const appvitals = readFileSync(path.join(root, "hosted/app/appvitals/page.tsx"), "utf8");
+    const shipvitals = readFileSync(path.join(root, "hosted/app/shipvitals/page.tsx"), "utf8");
+    const merchantops = readFileSync(path.join(root, "hosted/app/merchantops/page.tsx"), "utf8");
+    expect(home).toContain("worksWith={<WorksWithPlay />}");
+    expect(home).toContain("worksWith={<WorksWithAppStore />}");
+    expect(home).toContain("worksWith={<WorksWithStores />}");
+    expect(appvitals).toContain("worksWith={<WorksWithPlay />}");
+    expect(shipvitals).toContain("worksWith={<WorksWithAppStore />}");
+    expect(merchantops).toContain("worksWith={<WorksWithStores />}");
+    expect(marks).toContain("{worksWith}");
+    expect(marks).not.toContain("<BrandLogos brands={brands} size={Tag");
     expect(marks).toContain("/brands/google-play.svg");
     expect(marks).toContain("/brands/app-store.png");
     expect(marks).toContain("/brands/app-store-connect.png");

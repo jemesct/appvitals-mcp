@@ -17,8 +17,7 @@ export default function HomePage() {
       </p>
       {first ? (
         <section className="card">
-          <WorksWithPlay />
-          <ProductTitle as="h2" brands={["googlePlay"]}>
+          <ProductTitle as="h2" worksWith={<WorksWithPlay />}>
             {first.name}
           </ProductTitle>
           <p>{first.summary}</p>
@@ -34,8 +33,7 @@ export default function HomePage() {
         </section>
       ) : null}
       <section className="card">
-        <WorksWithAppStore />
-        <ProductTitle as="h2" brands={["appStore", "appStoreConnect"]}>
+        <ProductTitle as="h2" worksWith={<WorksWithAppStore />}>
           ShipVitals
         </ProductTitle>
         <p>iOS only. App Store Connect reviews, TestFlight, and version status. Not Google Play.</p>
@@ -47,8 +45,7 @@ export default function HomePage() {
         </p>
       </section>
       <section className="card">
-        <WorksWithStores />
-        <ProductTitle as="h2" brands={["lemonSqueezy", "paddle"]}>
+        <ProductTitle as="h2" worksWith={<WorksWithStores />}>
           MerchantOps
         </ProductTitle>
         <p>Lemon Squeezy and Paddle: MRR, subscriptions, churn, failed payments, refunds, licence keys, and discounts.</p>

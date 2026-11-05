@@ -10,7 +10,7 @@ const BRANDS: Record<BrandId, { src: string; alt: string; label: string }> = {
   paddle: { src: "/brands/paddle.png", alt: "Paddle", label: "Paddle" },
 };
 
-export function BrandLogos({ brands, size = 32 }: { brands: BrandId[]; size?: number }) {
+export function BrandLogos({ brands, size = 22 }: { brands: BrandId[]; size?: number }) {
   return (
     <span className="brand-logos">
       {brands.map((id) => {
@@ -42,17 +42,17 @@ export function WorksWith({ brands, children }: { brands: BrandId[]; children: R
 
 export function ProductTitle({
   as: Tag = "h1",
-  brands,
+  worksWith,
   children,
 }: {
   as?: "h1" | "h2";
-  brands: BrandId[];
+  worksWith: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="product-title">
-      <BrandLogos brands={brands} size={Tag === "h1" ? 44 : 36} />
       <Tag>{children}</Tag>
+      {worksWith}
     </div>
   );
 }
