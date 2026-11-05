@@ -1,0 +1,37 @@
+{
+  "rows": [
+    {
+      "startTime": { "year": 2026, "month": 11, "day": 2 },
+      "dimensions": [
+        { "dimension": "countryCode", "stringValue": "US", "valueLabel": "United States" }
+      ],
+      "metrics": [
+        { "metric": "userPerceivedCrashRate", "decimalValue": { "value": "0.004" } },
+        { "metric": "crashRate", "decimalValue": { "value": "0.003" } },
+        { "metric": "distinctUsers", "decimalValue": { "value": "900" } }
+      ]
+    },
+    {
+      "startTime": { "year": 2026, "month": 11, "day": 3 },
+      "dimensions": [
+        { "dimension": "countryCode", "stringValue": "US", "valueLabel": "United States" }
+      ],
+      "metrics": [
+        { "metric": "userPerceivedCrashRate", "decimalValue": { "value": "0.005" } },
+        { "metric": "crashRate", "decimalValue": { "value": "0.004" } },
+        { "metric": "distinctUsers", "decimalValue": { "value": "950" } }
+      ]
+    },
+    {
+      "startTime": { "year": 2026, "month": 11, "day": 3 },
+      "dimensions": [
+        { "dimension": "countryCode", "stringValue": "DE", "valueLabel": "Germany" }
+      ],
+      "metrics": [
+        { "metric": "userPerceivedCrashRate", "decimalValue": { "value": "0.02" } },
+        { "metric": "crashRate", "decimalValue": { "value": "0.018" } },
+        { "metric": "distinctUsers", "decimalValue": { "value": "200" } }
+      ]
+    }
+  ]
+}

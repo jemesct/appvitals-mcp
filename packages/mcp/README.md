@@ -95,7 +95,11 @@ claude mcp add appvitals \
 - `get_recent_reviews` (last 7 days only, star filters, optional translation)
 - `reply_to_review` (write, needs confirm and `APPVITALS_ALLOW_WRITES=true`)
 - `get_ratings_summary` (from those recent reviews, not a lifetime average)
+- `get_ratings_by_country` (same 7-day reviews, grouped by `reviewerLanguage`; the reviews API has no country field)
 - `get_vitals` (crash and ANR, flags 1.09% user-perceived crash and 0.47% ANR)
+- `get_vitals_breakdown` (same vitals family, one dimension: `device`, `androidVersion`, or `country`)
+- `get_user_trends` (daily `distinctUsers` from vitals; install/uninstall counts are not on the Reporting API)
+- `get_prelaunch_report` (latest test-track version codes; pre-launch findings are not on the public Play APIs)
 - `list_releases` (opens an edit and always deletes it)
 - `check_16kb_readiness` (version codes plus a manual checklist, including `zipalign -c -P 16 -v 4 app.apk`)
 

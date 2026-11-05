@@ -109,6 +109,63 @@ describe("Google client", () => {
     expect(attempt).toBe(2);
     await expect(client.listTracks("com.example.app", "edit")).rejects.toMatchObject({ status: 403 });
   });
+
+  it("queries a metric set with dimensions and follows nextPageToken", async () => {
+    const bodies: unknown[] = [];
+    const fetchImpl: typeof fetch = async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/crashRateMetricSet") && (!init || init.method === "GET" || !init.method)) {
+        return new Response(JSON.stringify({}), { status: 200 });
+      }
+      if (url.includes(":query")) {
+        bodies.push(JSON.parse(String(init?.body ?? "{}")));
+        if (bodies.length === 1) {
+          return new Response(
+            JSON.stringify({
+              rows: [
+                {
+                  startTime: { year: 2026, month: 11, day: 3 },
+                  dimensions: [{ dimension: "deviceModel", stringValue: "google/coral" }],
+                  metrics: [{ metric: "crashRate", decimalValue: { value: "0.01" } }],
+                },
+              ],
+              nextPageToken: "page-2",
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response(
+          JSON.stringify({
+            rows: [
+              {
+                startTime: { year: 2026, month: 11, day: 3 },
+                dimensions: [{ dimension: "deviceModel", stringValue: "samsung/b0q" }],
+                metrics: [{ metric: "crashRate", decimalValue: { value: "0.02" } }],
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 200 });
+    };
+    const client = new GooglePlayClient({
+      tokenProvider: { async getAccessToken() { return "test-token"; } },
+      fetchImpl,
+      rateLimiter: new TokenBucket({ capacity: 100, refillPerSecond: 100, sleep: async () => undefined }),
+      retry: { sleep: async () => undefined, random: () => 0 },
+    });
+    const rows = await client.queryMetricSet({
+      packageName: "com.example.app",
+      metricSet: "crashRateMetricSet",
+      days: 7,
+      metrics: ["crashRate"],
+      dimensions: ["deviceModel"],
+    });
+    expect(bodies[0]).toMatchObject({ dimensions: ["deviceModel"], metrics: ["crashRate"], pageSize: 1000 });
+    expect(bodies[1]).toMatchObject({ pageToken: "page-2", dimensions: ["deviceModel"] });
+    expect(rows.map((row) => row.dimensions?.deviceModel)).toEqual(["google/coral", "samsung/b0q"]);
+  });
 });
 
 describe("rate limiter", () => {

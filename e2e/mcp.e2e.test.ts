@@ -25,7 +25,11 @@ const calls: Array<[string, Record<string, unknown>]> = [
   ["list_apps", {}],
   ["get_recent_reviews", { packageName: "com.example.app", maxResults: 5, maxStars: 5 }],
   ["get_ratings_summary", { packageName: "com.example.app" }],
+  ["get_ratings_by_country", { packageName: "com.example.app" }],
   ["get_vitals", { packageName: "com.example.app", days: 7 }],
+  ["get_vitals_breakdown", { packageName: "com.example.app", dimension: "country", days: 7 }],
+  ["get_user_trends", { packageName: "com.example.app", days: 14 }],
+  ["get_prelaunch_report", { packageName: "com.example.app" }],
   ["list_releases", { packageName: "com.example.app" }],
   ["check_16kb_readiness", { packageName: "com.example.app" }],
   [

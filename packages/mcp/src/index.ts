@@ -10,6 +10,7 @@ export type {
   NormalizedReview,
   PlayClient,
   TrackInfo,
+  VitalsDimension,
 } from "./play/types.js";
 export { TokenBucket, getProcessRateLimiter } from "./rate-limit.js";
 export { ok, fail } from "./result.js";
@@ -21,12 +22,16 @@ export {
   collectRecentReviews,
   collectVitals,
   toolCheck16kb,
+  toolGetPrelaunchReport,
+  toolGetRatingsByCountry,
   toolGetRatingsSummary,
   toolGetRecentReviews,
   toolGetReviewHistory,
+  toolGetUserTrends,
   toolGetVitals,
+  toolGetVitalsBreakdown,
   toolListApps,
   toolListReleases,
   toolReplyToReview,
 } from "./tools.js";
-export type { AppVitalsContext, VitalsReport } from "./tools.js";
+export type { AppVitalsContext, VitalsReport, VitalsSlice } from "./tools.js";

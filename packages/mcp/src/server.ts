@@ -6,10 +6,14 @@ import { MISSING_CREDENTIALS, MockPlayClient, UnavailablePlayClient } from "./pl
 import type { PlayClient } from "./play/types.js";
 import {
   toolCheck16kb,
+  toolGetPrelaunchReport,
+  toolGetRatingsByCountry,
   toolGetRatingsSummary,
   toolGetRecentReviews,
   toolGetReviewHistory,
+  toolGetUserTrends,
   toolGetVitals,
+  toolGetVitalsBreakdown,
   toolListApps,
   toolListReleases,
   toolReplyToReview,
@@ -91,6 +95,61 @@ export function createAppVitalsServer(ctx: AppVitalsContext): McpServer {
       },
     },
     async (args) => toolGetVitals(ctx, args),
+  );
+
+  server.registerTool(
+    "get_vitals_breakdown",
+    {
+      description:
+        "Same Android vitals family as get_vitals, sliced by one dimension: device (deviceModel), androidVersion (apiLevel), or country (countryCode). Uses the latest day in the window for each slice and flags Play bad-behaviour thresholds.",
+      inputSchema: {
+        packageName,
+        dimension: z
+          .enum(["device", "androidVersion", "country"])
+          .describe("Breakdown: device, androidVersion, or country"),
+        days: z.number().int().min(1).max(90).optional().describe("How many days back to query. Default 7."),
+      },
+    },
+    async (args) => toolGetVitalsBreakdown(ctx, args),
+  );
+
+  server.registerTool(
+    "get_prelaunch_report",
+    {
+      description:
+        "Best-effort pre-launch context. Google does not expose pre-launch report findings on the public Play APIs, so this returns the latest non-production track version codes and a clear note that the lab report itself is Console-only.",
+      inputSchema: { packageName },
+    },
+    async (args) => toolGetPrelaunchReport(ctx, args),
+  );
+
+  server.registerTool(
+    "get_user_trends",
+    {
+      description:
+        "Daily active-user trend from Play Developer Reporting vitals (distinctUsers). Install and uninstall counts are not on androidpublisher or playdeveloperreporting; the tool says so instead of inventing them.",
+      inputSchema: {
+        packageName,
+        days: z.number().int().min(1).max(90).optional().describe("How many days back to query. Default 28."),
+      },
+    },
+    async (args) => toolGetUserTrends(ctx, args),
+  );
+
+  server.registerTool(
+    "get_ratings_by_country",
+    {
+      description:
+        "Sibling of get_ratings_summary. Groups the last 7 days of reviews by reviewerLanguage. The reviews API has no country field, so country-level lifetime ratings are not available with typical Play Console service-account scopes.",
+      inputSchema: {
+        packageName,
+        countryCode: z
+          .string()
+          .optional()
+          .describe("Not supported. The reviews API has no country field; the tool will refuse this filter."),
+      },
+    },
+    async (args) => toolGetRatingsByCountry(ctx, args),
   );
 
   server.registerTool(
