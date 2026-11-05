@@ -9,6 +9,11 @@ export function generateApiKey(): { token: string; keyHash: string; keyPrefix: s
   return { token, keyHash: sha256(token), keyPrefix: token.slice(0, 8) };
 }
 
+/** Usage rows keep the 8 character prefix from generateApiKey. A longer value is cut so a full key cannot be stored. */
+export function safeKeyPrefix(prefix: string): string {
+  return prefix.trim().slice(0, 8);
+}
+
 export function bearerToken(header: string | null): string | null {
   if (!header) return null;
   const match = header.match(/^Bearer\s+(\S+)$/i);

@@ -76,3 +76,18 @@ CREATE TABLE IF NOT EXISTS alerts_sent (
   sent_at TIMESTAMPTZ NOT NULL,
   UNIQUE (customer_id, product_id, kind, subject_key)
 );
+
+-- Metadata for hosted MCP tools/call requests. No arguments, review text, or full API keys.
+CREATE TABLE IF NOT EXISTS mcp_usage (
+  id TEXT PRIMARY KEY,
+  product_id TEXT NOT NULL,
+  customer_id TEXT NOT NULL REFERENCES customers(id),
+  key_prefix TEXT NOT NULL,
+  tool_name TEXT NOT NULL,
+  ok BOOLEAN NOT NULL,
+  latency_ms INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS mcp_usage_product_created
+  ON mcp_usage (product_id, created_at DESC);

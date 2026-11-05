@@ -1,13 +1,16 @@
 import postgres from "postgres";
 import { schemaSql } from "../db/schema";
+import { safeKeyPrefix } from "./keys";
 import type {
   AlertSent,
   ApiKeyRecord,
   AppRecord,
   Customer,
+  RecordToolEventInput,
   Repository,
   ReviewSnapshot,
   Subscription,
+  ToolEvent,
   UpsertSubscriptionInput,
   VitalsSnapshot,
 } from "./repo";
@@ -386,4 +389,51 @@ class PostgresRepository implements Repository {
     `;
     return { inserted: rows.length > 0 };
   }
+
+  async recordToolEvent(input: RecordToolEventInput): Promise<ToolEvent> {
+    await this.ready();
+    const eventId = crypto.randomUUID();
+    const prefix = safeKeyPrefix(input.keyPrefix);
+    const [row] = await this.sql`
+      INSERT INTO mcp_usage (id, product_id, customer_id, key_prefix, tool_name, ok, latency_ms, created_at)
+      VALUES (
+        ${eventId}, ${input.productId}, ${input.customerId}, ${prefix}, ${input.toolName},
+        ${input.ok}, ${input.latencyMs}, ${input.createdAt}
+      )
+      RETURNING id, product_id, customer_id, key_prefix, tool_name, ok, latency_ms, created_at
+    `;
+    return mapToolEvent(row);
+  }
+
+  async listToolEvents(input: { customerId?: string; productId?: string; limit?: number } = {}): Promise<ToolEvent[]> {
+    await this.ready();
+    const limit = clampLimit(input.limit);
+    const rows = await this.sql`
+      SELECT id, product_id, customer_id, key_prefix, tool_name, ok, latency_ms, created_at
+      FROM mcp_usage
+      WHERE (${input.customerId ?? null}::text IS NULL OR customer_id = ${input.customerId ?? null})
+        AND (${input.productId ?? null}::text IS NULL OR product_id = ${input.productId ?? null})
+      ORDER BY created_at DESC, id DESC
+      LIMIT ${limit}
+    `;
+    return rows.map((row) => mapToolEvent(row));
+  }
+}
+
+function clampLimit(limit: number | undefined): number {
+  if (limit == null || !Number.isFinite(limit)) return 100;
+  return Math.min(500, Math.max(1, Math.floor(limit)));
+}
+
+function mapToolEvent(row: any): ToolEvent {
+  return {
+    id: row.id,
+    productId: row.product_id,
+    customerId: row.customer_id,
+    keyPrefix: row.key_prefix,
+    toolName: row.tool_name,
+    ok: Boolean(row.ok),
+    latencyMs: row.latency_ms == null ? null : Number(row.latency_ms),
+    createdAt: iso(row.created_at) ?? new Date().toISOString(),
+  };
 }

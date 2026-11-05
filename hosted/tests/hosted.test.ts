@@ -9,6 +9,7 @@ import { authenticateApiKey, entitledPackages, subscriptionAllowsAccess } from "
 import { schemaSql } from "../db/schema";
 import { MemoryEmailSender } from "../lib/email";
 import { generateApiKey, sha256 } from "../lib/keys";
+import { recordAuthenticatedToolCall, toolCallOk, toolNamesFromMcpBody } from "../lib/mcp-usage";
 import { handleCheckoutRequest, handleLemonEvent, signLemonBody, verifyLemonSignature } from "../lib/lemonsqueezy";
 import { MemoryRepository } from "../lib/memory-repo";
 import { cronAuthorised } from "../lib/runtime";
@@ -373,6 +374,109 @@ describe("hosted", () => {
     expect(subscription?.plan).toBe("solo");
   });
 
+  it("records hosted tool calls as metadata and can query them", async () => {
+    const repo = new MemoryRepository();
+    const customer = await repo.upsertCustomerByEmail("usage@example.com");
+    const key = generateApiKey();
+    const secretTail = key.token.slice(8);
+    const reviewText = "The app crashed and lost my streak of 140 days.";
+    const body = JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: {
+        name: "get_recent_reviews",
+        arguments: { packageName: "com.example.app", replyText: reviewText, apiKey: key.token },
+      },
+    });
+    expect(toolNamesFromMcpBody(body)).toEqual(["get_recent_reviews"]);
+    expect(toolNamesFromMcpBody(JSON.stringify({ jsonrpc: "2.0", method: "tools/list" }))).toEqual([]);
+
+    const started = Date.now() - 25;
+    await recordAuthenticatedToolCall({
+      repo,
+      productId: "appvitals",
+      customerId: customer.id,
+      keyPrefix: key.token,
+      body,
+      response: new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: { content: [{ type: "text", text: reviewText }], isError: false },
+        }),
+        { status: 200 },
+      ),
+      startedAt: started,
+      failed: false,
+    });
+    await recordAuthenticatedToolCall({
+      repo,
+      productId: "appvitals",
+      customerId: customer.id,
+      keyPrefix: key.keyPrefix,
+      body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "get_vitals" } }),
+      response: new Response(
+        JSON.stringify({ jsonrpc: "2.0", id: 2, result: { isError: true, content: [{ type: "text", text: "nope" }] } }),
+        { status: 200 },
+      ),
+      startedAt: Date.now(),
+      failed: false,
+    });
+    await repo.recordToolEvent({
+      productId: "shipvitals",
+      customerId: customer.id,
+      keyPrefix: key.keyPrefix,
+      toolName: "list_reviews",
+      ok: true,
+      latencyMs: 5,
+      createdAt: "2026-11-01T00:00:00.000Z",
+    });
+
+    const rows = await repo.listToolEvents({ customerId: customer.id, productId: "appvitals" });
+    expect(rows).toHaveLength(2);
+    const reviews = rows.find((row) => row.toolName === "get_recent_reviews");
+    const vitals = rows.find((row) => row.toolName === "get_vitals");
+    expect(reviews?.ok).toBe(true);
+    expect(vitals?.ok).toBe(false);
+    expect(reviews?.keyPrefix).toBe(key.keyPrefix);
+    expect(reviews?.keyPrefix).toHaveLength(8);
+    expect(reviews?.latencyMs).toBeGreaterThanOrEqual(20);
+    expect(rows.every((row) => row.customerId === customer.id)).toBe(true);
+
+    await repo.recordToolEvent({
+      productId: "order-check",
+      customerId: customer.id,
+      keyPrefix: "av_order1",
+      toolName: "older",
+      ok: true,
+      latencyMs: 1,
+      createdAt: "2026-11-03T00:00:00.000Z",
+    });
+    await repo.recordToolEvent({
+      productId: "order-check",
+      customerId: customer.id,
+      keyPrefix: "av_order1",
+      toolName: "newer",
+      ok: true,
+      latencyMs: 2,
+      createdAt: "2026-11-04T00:00:00.000Z",
+    });
+    const ordered = await repo.listToolEvents({ productId: "order-check" });
+    expect(ordered.map((row) => row.toolName)).toEqual(["newer", "older"]);
+    expect(ordered[0]?.keyPrefix).toBe("av_order");
+    expect((await repo.listToolEvents({ productId: "order-check", limit: 1 }))[0]?.toolName).toBe("newer");
+
+    const stored = JSON.stringify(repo.toolEvents);
+    expect(stored).not.toContain(secretTail);
+    expect(stored).not.toContain(reviewText);
+    expect(stored).not.toContain("com.example.app");
+    expect(await repo.listToolEvents({ productId: "shipvitals" })).toHaveLength(1);
+    expect(await toolCallOk(Response.json({ jsonrpc: "2.0", id: 1, error: { code: -32000, message: "nope" } }))).toBe(
+      false,
+    );
+  });
+
   it("keeps user-facing copy free of em dashes", () => {
     const files = [
       "README.md",
@@ -386,6 +490,7 @@ describe("hosted", () => {
       "hosted/app/shipvitals/connect/page.tsx",
       "hosted/components/ShipExamples.tsx",
       "hosted/app/account/page.tsx",
+      "hosted/README.md",
     ];
     for (const file of files) {
       expect(readFileSync(path.join(root, file), "utf8"), file).not.toContain("\u2014");
